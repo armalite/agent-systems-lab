@@ -1,0 +1,11 @@
+// Pyright configuration lives here rather than in pyproject.toml [tool.pyright]:
+// an unrelated pyrightconfig.json in the parent directory (/home/armalite/dev) otherwise
+// wins pyright's upward root discovery and type-checks the wrong source tree. A
+// pyrightconfig.json in this project root stops that walk.
+{
+  "include": ["src", "tests"],
+  "pythonVersion": "3.12",
+  "venvPath": ".",
+  "venv": ".venv",
+  "typeCheckingMode": "strict"
+}

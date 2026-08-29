@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Agent Systems Lab
+# Experiment output: raw traces and normalized results are reproducible artifacts, not source.
+# The directory is created by the code that first writes to it (Milestone 2), not committed empty.
+/results/
+
+# NOTE: the Python template above ignores `lib/`, so do not create `src/agent_lab/lib/`.

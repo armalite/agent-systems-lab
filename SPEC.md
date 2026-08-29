@@ -1,196 +1,500 @@
-Agent Systems Lab - Build Specification
+# Agent Systems Lab - Research & Build Specification
 
-1. Purpose
+**Status:** Active research specification  
+**Version:** 2.0  
+**Repository:** `agent-systems-lab`
 
-Build a long-lived, reproducible research laboratory for experimentally studying LLM agent systems rather than a one-off agent application.
+---
 
-The initial research programmes are:
+## 0. Researcher Intent and Continuation Brief
 
-Tool-space interference and capability regression - determine when adding tools to an agent's available capability set causes previously successful tasks to fail, identify the mechanisms that cause the regression, and eventually test automatic diagnosis and repair.
+This section exists so that any AI coding/research agent can pick up this project without needing the original conversation that created it.
 
-Persistent agent memory - determine what an agent should remember, retrieve, update, invalidate and forget across sessions, and measure when memory improves or harms agent performance.
+### What the researcher is actually trying to do
 
-The project must be designed so that new research programmes can be added later without rewriting the core harness.
+The goal is **not** to build another agent demo, MCP wrapper, generic agent framework, benchmark clone, or portfolio toy.
 
-The guiding principle is: build an experimental instrument, not an agent framework.
+The researcher wants to become an active contributor to frontier AI systems work by:
 
-2. Core Research Questions
+- finding unexplained or poorly understood behaviour in modern LLM agent systems;
+- turning those observations into controlled, reproducible experiments;
+- identifying results that may be genuinely useful to the broader AI community;
+- publishing useful findings, datasets, evals, tooling, or architectural ideas when warranted;
+- building expertise at the intersection of AI behaviour and real software systems.
 
-2.1 Tool-space interference
+The researcher is an experienced staff-level data/platform engineer who increasingly works on AI systems, including MCP, agent/tool integration, evaluation, protocol behaviour, and client internals. The comparative advantage being pursued is **AI systems research**, especially questions involving tools, memory, evolving environments, evaluation, compatibility, feedback loops, and reliability - not competing with frontier labs on foundation-model pretraining.
 
-Initial questions:
+Compute and budget are finite. Prefer research questions that can be investigated with controlled API experiments, open models where appropriate, local infrastructure, and strong experimental design rather than large-scale model training.
 
-Does task success decrease as additional irrelevant tools are added?
+### What success looks like
 
-Does semantic overlap between tools cause more regression than raw tool count?
+Success is not:
 
-How do tool names, descriptions, schemas, examples and ordering affect selection accuracy?
+> "The repository has lots of features."
 
-Are interference effects model-specific?
+Success is:
 
-Can interfering tool pairs or clusters be identified automatically?
+> "The lab produced a trustworthy, reproducible observation that tells us something non-obvious about agent systems, survives appropriate controls, appears meaningfully distinct from existing work, and creates a useful next research question."
 
-Can an automated process modify the capability representation and recover lost performance without overfitting the evaluation set?
+The long-term aspiration is to reach research that is genuinely worth sharing with the AI community.
 
-Important property to investigate:
+### Core working philosophy
 
-Capability addition may be non-monotonic: adding a new capability can reduce the effective capability of the complete system.
+**Build a microscope, not a product.**
 
-2.2 Persistent memory
+The repository is an experimental instrument. Platform work exists only to make valid experiments easier to run, inspect, reproduce, and extend.
 
-Initial questions:
+Known phenomena may be reproduced briefly to validate the instrument, but **reproduction is not the end goal**.
 
-Which kinds of information are worth preserving between sessions?
+### Critical anti-goal
 
-Is structured memory more useful than transcript summaries or full-history replay?
+Do not spend significant time exhaustively re-testing already-established results merely because the harness makes those experiments easy.
 
-How should episodic, semantic and procedural memories be represented?
+For example, prior work already establishes that:
 
-How accurately can relevant memories be retrieved?
+- large or confusing tool-spaces can degrade agent performance;
+- semantically overlapping tools can interfere with selection;
+- tool descriptions and schemas can materially affect tool use;
+- stale or incorrect memory can harm agents;
+- dynamic environments remain difficult for current agents.
 
-When does stale memory degrade performance?
+A small reproduction of a known effect is useful as **calibration**. A large reproduction programme is not justified unless it supports a new unanswered question.
 
-How should procedural memories be invalidated when tools or environments change?
+### Current frontier direction
 
-2.3 Intersection of tools and memory
+The current strongest research direction is **evolving agent systems**:
 
-Later experiments should examine whether learned procedural memories improve future tool selection and what happens when the tool environment subsequently changes.
+> How do persistent agents behave when their capabilities, tools, environment, and learned experience all change over time?
 
-This creates a particularly important systems question:
+Especially interesting is the interaction between:
 
-How should an agent invalidate learned procedural knowledge when its capability environment changes?
+1. **capability evolution** - tools are added, removed, renamed, versioned, or change semantics;
+2. **persistent agent memory** - the agent stores procedural or experiential knowledge derived from earlier versions of that capability environment;
+3. **feedback effects** - old experience may help adaptation, become stale, amplify errors, or reinforce new failures;
+4. **compatibility mechanisms** - provenance, versioning, dependency tracking, selective revalidation, dynamic capability exposure, or other mechanisms may mitigate those failures.
 
-3. Scope
+A representative research question is:
 
-In scope for the initial implementation
+> **Does persistent procedural memory amplify or mitigate capability regression when an LLM agent's tool environment evolves?**
 
-Python research harness.
+A representative mitigation question is:
 
-Direct model-provider integrations.
+> **Can capability-aware memory provenance and selective revalidation reduce regressions after capability changes?**
 
-Real MCP client/server interactions.
+These are candidate directions, not pre-decided conclusions. They must pass the novelty process in Section 3 before substantial implementation.
 
-Synthetic deterministic MCP tools.
+---
 
-Deterministic task datasets with known expected outcomes.
+## 1. Purpose
 
-Experiment configuration and execution.
+Build a long-lived, reproducible laboratory for experimentally studying **evolving LLM agent systems**.
 
-Detailed trace capture.
+The system should make it cheap to:
 
-Automated scoring.
+1. define a hypothesis;
+2. construct controlled agent environments;
+3. vary one or more explicit experimental factors;
+4. run the same tasks across conditions and models;
+5. preserve the complete agent/tool interaction trace;
+6. score outcomes deterministically where possible;
+7. compare conditions;
+8. inspect individual regressions and unexpected behaviours;
+9. record observations;
+10. decide the next experiment from evidence rather than from a feature roadmap.
 
-Repeated runs and controlled comparisons.
+The lab must support research programmes involving tools, MCP, memory, context, model behaviour, evaluation, evolving environments, and other agent-system components without requiring the core harness to be rewritten.
 
-Parquet result storage and DuckDB analysis.
+The guiding principle remains:
 
-CLI for running experiments.
+> **Build an experimental instrument, not an agent framework.**
 
-Basic plots and tabular summaries.
+---
 
-Provider/model abstraction sufficient to compare multiple models later.
+## 2. Research Model
 
-Initial tool-interference experiment suite.
+The project should distinguish three kinds of work.
 
-Foundation for a future memory experiment suite.
+### 2.1 Calibration work
 
-Explicitly out of scope initially
+Small experiments reproducing a known effect to establish that the harness is capable of measuring it.
 
-Do not build any of the following unless a later experiment requires it:
+Example:
 
-General-purpose production agent framework.
+> A baseline tool-space performs better than the same tool-space after strongly overlapping tools are introduced.
 
-Web application or dashboard.
+Calibration work should be deliberately small.
 
-Kubernetes deployment.
+### 2.2 Characterisation work
 
-Cloud infrastructure.
+Experiments that isolate mechanisms behind an observation.
 
-Kafka or distributed eventing.
+Example:
 
-Postgres.
+> If a regression appears, is it caused primarily by naming similarity, description similarity, schema overlap, ordering, context length, model-specific routing behaviour, or something else?
 
-Vector database service.
+Characterisation is useful when it supports a genuinely interesting unanswered question. It must not expand automatically into a large benchmark grid.
 
-LangChain.
+### 2.3 Frontier research work
 
-LlamaIndex.
+The primary purpose of this repository.
 
-CrewAI.
+A frontier experiment should attempt to answer a question that:
 
-AutoGen.
+- appears incompletely answered by current literature or practice;
+- has a clearly stated hypothesis or exploratory objective;
+- can generate falsifiable or at least discriminating evidence;
+- has plausible value beyond this repository;
+- is controlled enough that a surprising result can be trusted;
+- can be communicated to other researchers or practitioners.
 
-Large orchestration frameworks.
+---
 
-Multi-agent architecture.
+## 3. Mandatory Novelty Gate
 
-Automatic self-healing of tool definitions in the first milestone.
+Before implementing any substantial research programme beyond calibration, stop and perform a novelty check.
 
-Production-grade auth or tenancy.
+This is a **research gate**, not an optional documentation task.
 
-Avoid abstractions that make it difficult to determine exactly what context, tools and messages were presented to a model.
+### 3.1 Required inputs
 
-4. Technical Principles
+Document:
 
-The implementation must prioritize:
+- the exact research question;
+- the proposed hypothesis, if hypothesis-driven;
+- why the answer would matter;
+- what existing work appears closest;
+- what the proposed experiment adds that existing work does not;
+- what result would be interesting even if the original hypothesis is false.
 
-Reproducibility - every result must be attributable to a model, experiment config, task definition, tool-space definition and run configuration.
+### 3.2 Current-literature check
 
-Observability - preserve raw interactions, not only final scores.
+Because AI research moves quickly, the novelty check must use current sources at the time the experiment is proposed.
 
-Controlled experimentation - changing a variable should not silently change other variables.
+Search at minimum where appropriate:
 
-Transparency - direct SDK and MCP use is preferred over hidden framework behaviour.
+- arXiv;
+- ACL / EMNLP / NAACL / NeurIPS / ICML / ICLR proceedings;
+- model-lab research/engineering publications;
+- relevant benchmark repositories;
+- recent systems or agent research;
+- reputable implementation work if the question is primarily systems-oriented.
 
-Provider neutrality - provider-specific code must not leak throughout the research harness.
+Do not rely solely on the knowledge encoded in an AI model.
 
-Extensibility - new experiments should mostly require datasets/configs, not core rewrites.
+### 3.3 Novelty decision
 
-Cheap iteration - small local experiments should be possible before spending on frontier-model sweeps.
+Record one of:
 
-Research integrity - do not optimize implementation around producing a desired experimental outcome.
+- **Proceed** - meaningful unanswered angle remains.
+- **Narrow** - the broad question is known, but a specific interaction/mechanism remains interesting.
+- **Reframe** - another formulation is more novel/useful.
+- **Stop** - the planned experiment largely duplicates existing work without a compelling reason.
 
-5. Preferred Technology Stack
+Store novelty reviews under:
 
-Use:
+```text
+research/novelty/
+```
 
-Python 3.12+
+Suggested file:
 
-uv for dependency/environment management
+```text
+research/novelty/RQ-001.md
+```
 
-pytest
+### 3.4 Implementation rule
 
-pydantic
+Coding agents must **not automatically implement the next research phase merely because it appears in this specification**.
 
-typer
+After calibration, future experiment implementation requires an explicitly selected research question that has passed this gate.
 
-rich
+---
 
-official MCP Python SDK
+## 4. Initial Research Programmes
 
-provider SDKs directly (Anthropic/OpenAI initially; additional providers later)
+These are research directions, not a backlog that must all be implemented.
 
-duckdb
+### 4.1 Phase 0 - Tool-space interference calibration
 
-pyarrow
+Purpose:
 
-pandas only where useful for analysis
+> Verify that the lab can reproduce a known non-monotonic capability effect and correctly trace individual regressions.
 
-matplotlib for simple plots
+This is calibration only.
 
-structured JSON/JSONL for raw traces
+Do not turn this phase into an exhaustive study of tool count, naming, descriptions, ordering, models, or schemas unless a later novelty-gated question requires those dimensions.
 
-Parquet for normalized experiment results
+### 4.2 Capability evolution
 
-Use static typing throughout sensible public interfaces.
+Study what happens to established agent behaviour when the capability environment changes over time.
 
-A lightweight formatter/linter/type-checking setup is desirable, e.g. Ruff plus Pyright or equivalent.
+Example transitions:
 
-6. Repository Structure
+```text
+Environment V1
+    |
+    | add / remove / rename / modify tool
+    v
+Environment V2
+    |
+    | modify schema / response / semantics
+    v
+Environment V3
+```
 
-Target structure:
+Questions may include:
 
+- Which existing behaviours regress after capability changes?
+- Can regressions be predicted before deployment?
+- Are regressions localized or systemic?
+- Do models differ in how they tolerate capability evolution?
+- What information is needed to identify causal capability relationships?
+
+### 4.3 Persistent memory in changing environments
+
+Study the interaction between learned experience and environmental change.
+
+Example:
+
+1. an agent repeatedly uses a capability environment;
+2. it stores procedural knowledge such as "for task pattern X, use Tool B";
+3. that memory improves later performance;
+4. the tool environment changes;
+5. the previously useful memory becomes incomplete, misleading, or wrong;
+6. measure whether memory helps adaptation or amplifies regression.
+
+Key question:
+
+> **When does remembered experience become technical debt for an agent?**
+
+### 4.4 Provenance-aware memory
+
+Investigate whether memories should carry dependencies on the environment that produced them.
+
+Conceptually:
+
+```yaml
+memory_id: M-104
+type: procedural
+content: "For customer-ID lookups, use get_customer."
+confidence: 0.91
+
+provenance:
+  capability: get_customer
+  capability_version: 1.4.0
+  schema_hash: "..."
+  toolspace_hash: "..."
+  source_runs:
+    - R-2201
+    - R-2204
+```
+
+When capabilities change:
+
+```text
+capability changed
+      |
+      v
+find dependent memories
+      |
+      v
+mark suspect / reduce confidence / revalidate
+      |
+      v
+retain, revise, or invalidate
+```
+
+This is analogous to lineage/dependency tracking in data and software systems, applied to machine experience.
+
+Candidate questions:
+
+- Does provenance reduce stale-memory failures?
+- What level of dependency granularity is useful?
+- Should memory confidence decay when its originating environment changes?
+- Can only affected memories be revalidated rather than rebuilding all memory?
+- What happens when a memory depends on interactions among multiple tools?
+
+### 4.5 Agent capability compatibility testing
+
+Explore whether capability changes can be treated as a compatibility problem analogous to software/API regression.
+
+Long-term conceptual flow:
+
+```text
+proposed capability change
+          |
+          v
+identify likely impacted behaviours
+          |
+          v
+generate or select targeted regression evals
+          |
+          v
+compare before / after environments
+          |
+          v
+localize regressions
+          |
+          v
+evaluate mitigation candidates
+          |
+          v
+held-out validation
+          |
+          v
+compatibility report
+```
+
+Potential mitigation classes include:
+
+- description changes;
+- naming changes;
+- schema changes;
+- capability grouping;
+- selective visibility;
+- routing policies;
+- context changes;
+- version-aware memory invalidation.
+
+Do not implement a self-healing system until experiments justify it.
+
+### 4.6 Adaptive capability surfaces
+
+A later possible direction is to test whether the optimal capability surface depends on:
+
+```text
+model x task x current state x memory x environment
+```
+
+Instead of exposing the same complete tool-space to every model:
+
+```text
+full capability ecosystem
+          |
+          v
+capability selection / compilation layer
+          |
+          v
+temporary task/model-specific capability surface
+          |
+          v
+model
+```
+
+Questions may include:
+
+- Do different models need different tool representations?
+- Is selecting a task-relevant subset better than exposing everything?
+- Should persistent memory affect which tools are shown?
+- Can a learned policy construct capability surfaces without hiding necessary tools?
+- Does dynamic capability selection reduce interference while preserving discovery?
+
+Again, novelty must be checked immediately before pursuing this work.
+
+---
+
+## 5. Scope of the Initial Build
+
+### In scope
+
+- Python research harness.
+- Direct model-provider integrations.
+- Real MCP client/server interactions.
+- Synthetic deterministic MCP tools.
+- Deterministic task datasets with known expected outcomes.
+- Declarative experiment configuration.
+- Detailed trace capture.
+- Automated deterministic scoring where possible.
+- Repeated runs and controlled comparisons.
+- Parquet result storage and DuckDB analysis.
+- CLI for running experiments.
+- Small analysis outputs and plots.
+- Provider/model abstraction sufficient to compare models later.
+- Research notebook files.
+- Phase 0 calibration experiment.
+- Architecture that can later support multi-session/evolving-environment experiments.
+
+### Explicitly out of scope initially
+
+Do not build unless a selected experiment requires it:
+
+- general-purpose production agent framework;
+- web application or dashboard;
+- Kubernetes deployment;
+- cloud infrastructure;
+- Kafka or distributed eventing;
+- Postgres;
+- hosted vector database;
+- LangChain;
+- LlamaIndex;
+- CrewAI;
+- AutoGen;
+- large orchestration frameworks;
+- multi-agent architecture;
+- autonomous self-healing;
+- production auth or tenancy;
+- exhaustive benchmark grids;
+- speculative memory architecture;
+- automatic experiment generation before the core lab is trustworthy.
+
+Avoid abstractions that make it difficult to determine exactly what context, tools, messages, memory, and observations were presented to a model.
+
+---
+
+## 6. Technical Principles
+
+Prioritize:
+
+1. **Reproducibility** - every result must be attributable to model, configuration, tasks, tool-space/environment, source version, and execution metadata.
+2. **Observability** - preserve raw interactions, not only scores.
+3. **Controlled experimentation** - a declared variable change must not silently alter another variable.
+4. **Transparency** - direct provider SDK and MCP use is preferred over hidden framework behaviour.
+5. **Provider neutrality** - provider-specific implementation must remain visible but isolated.
+6. **Extensibility** - new experiments should primarily add datasets/configuration/environment variants rather than rewrite the harness.
+7. **Cheap iteration** - debug locally and cheaply before expensive sweeps.
+8. **Research integrity** - do not optimize implementations to produce the hoped-for result.
+9. **Negative results matter** - a falsified hypothesis is still useful if the experiment is valid.
+10. **Unexpected behaviour is data** - do not automatically "fix" unexplained model behaviour before recording it.
+11. **Minimal platform bias** - build only infrastructure needed to answer current research questions.
+12. **Novelty awareness** - continuously distinguish calibration, replication, engineering work, and genuinely new research.
+
+---
+
+## 7. Preferred Technology Stack
+
+Use unless a current experiment gives a strong reason otherwise:
+
+- Python 3.12+
+- `uv`
+- `pytest`
+- `pydantic`
+- `typer`
+- `rich`
+- official MCP Python SDK
+- provider SDKs directly
+- `duckdb`
+- `pyarrow`
+- `pandas` where useful
+- `matplotlib` for simple research plots
+- JSON/JSONL for raw traces
+- Parquet for normalized results
+- Ruff
+- Pyright or equivalent static type checking
+
+Prefer strongly typed public interfaces where practical.
+
+Do not introduce a heavy agent framework as the harness itself.
+
+---
+
+## 8. Target Repository Structure
+
+```text
 agent-systems-lab/
+|
+|-- SPEC.md
+|-- AGENTS.md
+|-- CLAUDE.md
 |
 |-- src/
 |   `-- agent_lab/
@@ -213,6 +517,10 @@ agent-systems-lab/
 |       |   |-- runner.py
 |       |   `-- result.py
 |       |
+|       |-- environments/
+|       |   |-- base.py
+|       |   `-- versioning.py
+|       |
 |       |-- tracing/
 |       |   |-- events.py
 |       |   `-- recorder.py
@@ -224,7 +532,7 @@ agent-systems-lab/
 |       |-- analysis/
 |       |   `-- summaries.py
 |       |
-|       |-- memory/                 # foundation only initially
+|       |-- memory/                 # no speculative implementation initially
 |       |   `-- types.py
 |       |
 |       `-- cli.py
@@ -236,103 +544,131 @@ agent-systems-lab/
 |       `-- tools.py
 |
 |-- experiments/
-|   |-- tool_interference/
-|   |   |-- configs/
-|   |   |-- datasets/
-|   |   |-- toolspaces/
-|   |   `-- analysis/
+|   |-- calibration/
+|   |   `-- tool_interference/
 |   |
-|   `-- memory/
-|       |-- configs/
-|       |-- datasets/
-|       `-- analysis/
+|   `-- research/
+|       `-- <research-question-id>/
 |
-|-- results/                        # gitignored except small fixtures/examples
+|-- results/                        # gitignored except fixtures/examples
+|
 |-- research/
 |   |-- hypotheses.md
 |   |-- observations.md
 |   |-- experiment-log.md
-|   `-- research-backlog.md
+|   |-- research-backlog.md
+|   `-- novelty/
 |
 |-- tests/
 |-- .env.example
 |-- .gitignore
 |-- pyproject.toml
-|-- README.md
-`-- AGENTS.md
+`-- README.md
+```
 
-The exact module names may change if there is a strong technical reason, but preserve the separation of concerns.
+The exact module names may change for a strong technical reason. Preserve separation between:
 
-7. Core Domain Model
+- model-provider behaviour;
+- agent/environment behaviour;
+- experiment definition;
+- evaluation;
+- tracing;
+- persistence;
+- analysis.
 
-7.1 Model adapter
+Do not create empty abstractions merely to match this tree.
 
-Define a provider-neutral model interface.
+---
 
-Conceptually:
+## 9. Core Domain Model
 
+### 9.1 Model adapter
+
+Define a provider-neutral interface conceptually similar to:
+
+```python
 class ModelAdapter(Protocol):
     async def run(self, request: AgentRequest) -> AgentResponse:
         ...
+```
 
-The request must allow:
+Request support should include:
 
-system instructions
+- system instructions;
+- task/user input;
+- available tools;
+- conversation state;
+- optional memory/context;
+- provider-supported generation controls;
+- trace metadata.
 
-user/task input
+Response support should include:
 
-available tools
+- final model output;
+- tool calls;
+- tool arguments;
+- tool observations/results;
+- usage information where available;
+- latency;
+- provider request identifiers;
+- raw provider metadata or a serializable representation.
 
-conversation state
+Do not normalize away information that may later prove experimentally relevant.
 
-temperature / provider-supported generation controls
+### 9.2 Environment identity
 
-metadata required for tracing
+Experiments involving evolving systems need an explicit environment identity.
 
-The response must expose:
+Conceptually:
 
-final model output
+```yaml
+environment:
+  id: customer_env
+  version: 1.0.0
+  tool_space: customer_baseline_v1
+  fingerprint: "..."
+```
 
-tool calls
+A fingerprint may eventually incorporate:
 
-tool arguments
+- tool names;
+- descriptions;
+- schemas;
+- tool versions;
+- response contracts;
+- other experimentally relevant capability metadata.
 
-tool results/observations
+Do not overdesign environment versioning during Milestone 0. Establish only enough structure that later experiments can distinguish V1 from V2 without ambiguity.
 
-usage/token information where available
-
-latency
-
-provider request identifiers where available
-
-raw provider response or a serializable representation
-
-Do not normalize away provider-specific information that might later prove experimentally relevant. Store normalized fields plus provider-specific raw metadata.
-
-7.2 Task definition
+### 9.3 Task definition
 
 Each deterministic task should include at minimum:
 
+```yaml
 id: customer_email_001
 prompt: "What is the email address of customer C102?"
+
 expected:
   tool: get_customer
   arguments:
     customer_id: C102
   answer:
     email: alice@example.test
+
 metadata:
   domain: customer
   difficulty: baseline
+```
 
-The evaluator must be able to score tool selection separately from final answer correctness.
+Tool-selection correctness and final-answer correctness must be independently measurable.
 
-7.3 Tool-space definition
+### 9.4 Tool-space definition
 
 Tool sets must be declarative and versioned.
 
 Example:
 
+```yaml
 id: customer_baseline_v1
 tools:
   - get_customer
@@ -340,28 +676,35 @@ tools:
   - get_invoice
   - get_product
   - get_employee
+```
 
-And an interference variant:
+Calibration overlap condition:
 
+```yaml
 id: customer_overlap_v1
 extends: customer_baseline_v1
+
 tools:
   - find_customer
   - search_customers
   - get_customer_details
   - lookup_customer
   - customer_information
+```
 
-Where practical, experiment variants should alter metadata/config rather than duplicating source code.
-
-7.4 Experiment definition
+### 9.5 Experiment definition
 
 Experiments should be declarative.
 
 Example:
 
-id: tool_interference_001
-research_question: "Do semantically overlapping tools reduce tool-selection accuracy?"
+```yaml
+id: calibration_tool_interference_001
+
+classification: calibration
+
+research_question:
+  "Can this harness reproduce degradation after semantically overlapping tools are introduced?"
 
 model:
   provider: anthropic
@@ -369,7 +712,7 @@ model:
 
 task_set: customer_baseline_tasks_v1
 
-tool_spaces:
+conditions:
   - customer_baseline_v1
   - customer_overlap_v1
 
@@ -387,101 +730,75 @@ metrics:
   - input_tokens
   - output_tokens
   - latency_ms
+```
 
-Experiment configuration must be included in saved results.
+Saved results must include the complete resolved experiment configuration.
 
-8. Synthetic MCP Server
+---
 
-Build a deterministic MCP server specifically for controlled research.
+## 10. Synthetic MCP Environment
 
-Initial baseline tools:
+Build a deterministic MCP server specifically for controlled experimentation.
 
-get_customer(customer_id)
+### Baseline tools
 
-get_order(order_id)
+- `get_customer(customer_id)`
+- `get_order(order_id)`
+- `get_invoice(invoice_id)`
+- `get_product(product_id)`
+- `get_employee(employee_id)`
 
-get_invoice(invoice_id)
+Use fixed fixture-backed data checked into the repository.
 
-get_product(product_id)
+No external API/network dependency should be required for synthetic tools.
 
-get_employee(employee_id)
+### Calibration overlap tools
 
-Use a fixed in-memory or fixture-backed dataset checked into the repo.
+Use controlled additional tools such as:
 
-No external API/network dependencies should be required for the synthetic server.
+- `find_customer(name)`
+- `search_customers(query)`
+- `get_customer_details(customer_id)`
+- `lookup_customer(email)`
+- `customer_information(customer_id)`
 
-The baseline tools should have clear, distinct semantics.
+Their intended semantic overlap must be documented.
 
-Initial overlapping tools
+The purpose is not to prove tool interference is novel. The purpose is to establish that the laboratory can detect a known effect and preserve enough evidence to inspect it.
 
-Add controlled variants such as:
+---
 
-find_customer(name) - search by customer name
+## 11. Calibration Task Dataset
 
-search_customers(query) - broad fuzzy customer search
+Create approximately 20-30 deterministic tasks spanning the baseline tools.
 
-get_customer_details(customer_id) - extended profile after ID is known
+Requirements:
 
-lookup_customer(email) - lookup by email address
-
-customer_information(customer_id) - deliberately similar to get_customer
-
-The exact semantic overlap should be documented so experiments can distinguish intentionally similar tools from unrelated distractors.
-
-Later, allow tool metadata to be varied without changing tool execution behaviour:
-
-name
-
-description
-
-parameter names
-
-schema shape
-
-examples if supported by the client/harness
-
-description length
-
-ordering
-
-9. First Task Dataset
-
-Create 20-30 deterministic baseline tasks spanning the five baseline tools.
-
-Characteristics:
-
-approximately balanced across tools
-
-unambiguous expected tool
-
-deterministic tool result
-
-deterministic factual final answer
-
-simple enough that errors primarily reflect tool interaction rather than domain reasoning
+- approximately balanced across baseline tools;
+- unambiguous expected tool;
+- deterministic tool result;
+- deterministic final answer;
+- intentionally simple domain reasoning.
 
 Examples:
 
-"What is the email address of customer C102?"
+- "What is the email address of customer C102?"
+- "What is the status of order O204?"
+- "What amount is due on invoice I301?"
+- "What category is product P502?"
+- "Which office is employee E104 assigned to?"
 
-"What is the status of order O204?"
+The task difficulty must not obscure the capability-selection behaviour being measured.
 
-"What amount is due on invoice I301?"
+---
 
-"What category is product P502?"
-
-"Which office is employee E104 assigned to?"
-
-Do not make the initial tasks intellectually difficult.
-
-The experiment is measuring capability selection, not general knowledge.
-
-10. Trace Model
+## 12. Trace Model
 
 Raw trace preservation is mandatory.
 
-Every run should produce a trace containing ordered events such as:
+Every run should preserve ordered events such as:
 
+```text
 RUN_STARTED
 MODEL_REQUEST
 MODEL_RESPONSE
@@ -492,791 +809,641 @@ MODEL_REQUEST
 MODEL_RESPONSE
 RUN_COMPLETED
 EVALUATION_COMPLETED
+```
 
 Each event should include:
 
-timestamp
+- timestamp;
+- run ID;
+- experiment ID;
+- task ID;
+- environment ID/version;
+- model/provider;
+- sequence number;
+- event payload.
 
-run ID
+For future memory research, the trace design should also be capable of recording:
 
-experiment ID
+- memory candidates;
+- memory writes;
+- retrieval queries;
+- retrieved memories;
+- memory provenance;
+- memory invalidation/revalidation events.
 
-task ID
+Do not implement the full memory subsystem initially.
 
-model/provider
+Credentials must never appear in traces.
 
-sequence number
+---
 
-event-specific payload
+## 13. Normalized Result Schema
 
-Do not depend only on console logs.
+At minimum:
 
-Persist machine-readable raw traces to disk, ideally JSONL per run or per experiment batch.
-
-Sensitive API credentials must never appear in traces.
-
-11. Normalized Result Schema
-
-At minimum save:
-
+```text
 run_id
 experiment_id
-experiment_version
+experiment_classification
 timestamp
+source_commit_sha
+
 provider
 model
 model_parameters
+
+environment_id
+environment_version
+environment_fingerprint
+
 task_id
 task_set
+
 tool_space_id
 tool_count
 tool_names
+
 expected_tool
 selected_tool
 tool_selection_correct
+
 expected_arguments
 actual_arguments
 arguments_correct
+
 expected_answer
 actual_answer
 task_success
+
 tool_call_count
 input_tokens
 output_tokens
 latency_ms
+
 repetition
 random_seed_if_applicable
 trace_path
+```
 
 Store normalized batch results in Parquet.
 
-DuckDB queries should be able to compare experiment conditions without requiring application code.
+DuckDB must be usable directly against results without requiring application code.
 
-12. Evaluation
+---
 
-The initial evaluator should be deterministic wherever possible.
+## 14. Evaluation
+
+Initial evaluation should be deterministic wherever possible.
 
 Score separately:
 
-tool selection
+1. tool selection;
+2. argument correctness;
+3. tool-result handling;
+4. final-answer correctness;
+5. overall task success.
 
-argument correctness
+Avoid LLM-as-judge when a deterministic answer is available.
 
-tool result handling
+Later experiments may introduce semantic or LLM evaluation, but it must be an explicit evaluator type rather than an invisible default.
 
-final answer correctness
+---
 
-overall task success
-
-Avoid LLM-as-judge for the initial dataset because deterministic answers are available.
-
-Where textual comparison is required, prefer structured extraction or canonicalized exact comparisons.
-
-Later research can add semantic/LLM evaluation as a separate evaluator type.
-
-13. CLI
-
-Provide an ergonomic CLI.
+## 15. CLI
 
 Desired commands:
 
+```bash
 agent-lab list experiments
-agent-lab validate experiments/tool_interference/configs/tool_interference_001.yaml
-agent-lab run experiments/tool_interference/configs/tool_interference_001.yaml
+agent-lab validate <experiment-config>
+agent-lab run <experiment-config>
 agent-lab summarize <experiment-id-or-result-path>
+```
 
-Nice-to-have later:
+Later, if useful:
 
-agent-lab compare baseline overlap
+```bash
+agent-lab compare <condition-a> <condition-b>
 agent-lab inspect <run-id>
+```
 
-The CLI should display concise progress but must not be the source of truth for results.
+The CLI may provide progress/status, but persisted traces/results are the source of truth.
 
-14. Experiment 001 - Baseline vs Semantic Overlap
+---
 
-This is the first milestone and should be implemented before generalized research features.
+## 16. Phase 0 Calibration Experiment
 
-Hypothesis
+### Research classification
 
-Adding semantically overlapping tools will reduce tool-selection accuracy on tasks that previously succeed with a smaller, distinct tool-space.
+**Calibration / positive control. Not intended as a novel research contribution.**
 
-Conditions
+### Question
 
-Condition A: Baseline
+Can the lab reliably detect task regression when semantically overlapping capabilities are added to an otherwise stable tool-space?
 
-Five distinct tools.
+### Condition A
 
-Condition B: Semantic overlap
+Five distinct baseline tools.
 
-The same five tools plus five customer-related tools with overlapping names/descriptions/semantics.
+### Condition B
 
-Controlled variables
+The same five baseline tools plus five intentionally overlapping customer tools.
+
+### Controls
 
 Keep constant:
 
-model
+- model;
+- model parameters;
+- system instructions;
+- tasks;
+- fixture data;
+- evaluator;
+- MCP transport;
+- retry policy.
 
-model parameters
+The tool-space is the intended manipulated variable.
 
-system instruction
+### Initial execution
 
-tasks
+While debugging:
 
-synthetic data
+- 1-3 tasks;
+- one model;
+- one run.
 
-evaluator
+Once the harness is trustworthy:
 
-transport
+- approximately 20-30 tasks;
+- one model;
+- at least 3 repetitions if affordable/useful.
 
-retry policy
+### Required outputs
 
-Only the tool-space should change in the first comparison.
+- success by condition;
+- tool-selection accuracy by condition;
+- per-task regression list;
+- raw traces for regressions;
+- simple comparison chart;
+- notes on any unexpected behaviour.
 
-Execution
+### Calibration success criterion
 
-Initially:
+A successful calibration does **not** require a specific regression percentage.
 
-20-30 tasks
+Calibration succeeds if:
 
-one model
+1. the experiment is valid and controlled;
+2. model/tool interactions are fully inspectable;
+3. the evaluator correctly distinguishes outcomes;
+4. condition comparison is reproducible enough to reason about;
+5. any regression or non-regression can be explained from preserved evidence.
 
-temperature 0 if supported
+If a clear known interference effect appears, that is sufficient to validate the instrument.
 
-one run per condition while debugging
+### Mandatory stop
 
-then at least 3 repetitions for a useful result
+After Phase 0:
 
-Required output
+> **STOP.**
 
-Produce:
+Do not automatically build a large matrix of tool-count, naming, description, schema, ordering, or multi-model experiments.
 
-overall success by condition
+Record the result, inspect the traces, and invoke the novelty gate before selecting the first real research question.
 
-tool-selection accuracy by condition
+---
 
-per-task regression list
+## 17. Research Notebook Discipline
 
-raw traces for regressed tasks
+### `research/hypotheses.md`
 
-simple chart comparing baseline and overlap
+For each hypothesis record:
 
-Example summary:
+- ID;
+- statement;
+- rationale;
+- prediction;
+- falsification condition;
+- related experiment IDs.
 
-Condition                 Success   Tool Selection
--------------------------------------------------
-baseline                   93.3%        96.7%
-semantic_overlap           76.7%        80.0%
+### `research/observations.md`
 
-Regressed tasks: 6
-Improved tasks: 1
-Unchanged tasks: 23
+This is a first-class research artifact.
 
-Do not implement automatic repair yet.
-
-15. Subsequent Tool-Interference Experiments
-
-After Experiment 001 works reliably, make it possible to systematically vary one dimension at a time.
-
-Candidate dimensions:
-
-Tool quantity
-
-5
-
-10
-
-20
-
-50
-
-100
-
-Semantic similarity
-
-unrelated
-
-weakly related
-
-strongly related
-
-near duplicate
-
-Description quality
-
-precise
-
-normal
-
-ambiguous
-
-misleading
-
-Naming similarity
-
-Examples:
-
-get_customer
-
-customer_get
-
-retrieve_customer
-
-search_customer
-
-lookup_customer
-
-Description length
-
-short
-
-medium
-
-long
-
-extremely verbose
-
-Ordering
-
-expected tool first
-
-expected tool middle
-
-expected tool last
-
-randomized
-
-Provider/model
-
-Compare multiple models only after the experiment is stable on one provider.
-
-16. Future Tool-Space Diagnosis and Repair
-
-Do not implement during the first milestone, but design the harness so this can be added later.
-
-Long-term loop:
-
-existing tool-space
-        |
-        + new tool
-        v
-run regression suite
-        v
-detect degraded tasks
-        v
-identify likely interfering tools/clusters
-        v
-propose metadata/schema/routing changes
-        v
-rerun development evals
-        v
-run held-out evals
-        v
-accept or reject proposed change
-
-Possible repair actions:
-
-improve descriptions
-
-rename tools
-
-alter parameter terminology
-
-change schemas
-
-remove redundant tools
-
-group tools
-
-alter visibility/routing
-
-modify context supplied to the model
-
-Any automatic repair system must use a held-out evaluation set to reduce eval overfitting.
-
-17. Memory Research Foundation
-
-The initial build only needs interfaces/types and directory structure for memory research, not a complete memory system.
-
-Later create experimental conditions such as:
-
-Condition 0 - No memory
-
-Session 2 receives no information from Session 1.
-
-Condition 1 - Full transcript
-
-Replay complete history.
-
-Condition 2 - Summary memory
-
-Generate a compact summary after Session 1 and provide it to Session 2.
-
-Condition 3 - Episodic retrieval
-
-Store discrete experiences and retrieve relevant entries for Session 2.
-
-Condition 4 - Structured memory
-
-Example conceptual representation:
-
-semantic:
-  customer_output_preference: CSV
-
-procedural:
-  customer_lookup_requires: account_id
-
-episodic:
-  - event: endpoint_a_failed
-    timestamp: ...
-
-confidence:
-  customer_lookup_requires: 0.91
-
-Candidate metrics:
-
-downstream task success
-
-token usage
-
-retrieval precision
-
-retrieval recall where measurable
-
-stale-memory usage
-
-incorrect-memory usage
-
-latency
-
-18. Tool-Memory Interaction Experiments
-
-Later create a scenario such as:
-
-Agent uses Tool A incorrectly.
-
-Agent learns that Tool B is correct for a task pattern.
-
-This procedural memory improves later performance.
-
-The MCP environment changes and Tool B's semantics are modified or Tool C supersedes it.
-
-Measure whether retained procedural memory now causes regression.
-
-Potential research themes:
-
-memory invalidation
-
-capability-version awareness
-
-environment fingerprints
-
-confidence decay
-
-contradiction detection
-
-memory provenance
-
-automatic forgetting
-
-19. Research Notebook Discipline
-
-Create and maintain these files manually or semi-automatically.
-
-research/hypotheses.md
-
-Track hypotheses before experiments are run.
-
-Each hypothesis should contain:
-
-ID
-
-statement
-
-rationale
-
-predicted result
-
-falsification condition
-
-related experiments
-
-research/observations.md
-
-This is a critical research artifact.
-
-Record unexpected behaviour, even when it appears small.
+Record surprising behaviour before trying to eliminate it.
 
 Suggested format:
 
-## 2026-08-29 - Observation O-001
+```markdown
+## 2026-XX-XX - Observation O-001
 
 ### Observation
-Adding `lookup_customer_by_email` caused selection accuracy for
-ID-based `get_customer` tasks to fall from 96% to 81%.
+Describe the behaviour precisely.
+
+### Conditions
+What changed and what remained constant?
 
 ### Unexpected detail
-Removing examples from the new tool restored accuracy to 93%.
+What made the result surprising?
 
-### Candidate hypothesis
-Examples may dominate semantic routing more strongly than tool descriptions.
+### Candidate explanations
+List alternatives rather than prematurely selecting one.
 
 ### Follow-up
-Create an experiment holding name/schema constant while varying examples only.
+What smallest experiment would discriminate among explanations?
+```
 
-research/experiment-log.md
+### `research/experiment-log.md`
 
-Record completed experiments, links/paths to results, major findings and follow-ups.
+Record:
 
-research/research-backlog.md
+- experiment;
+- commit;
+- result paths;
+- major findings;
+- limitations;
+- next questions.
 
-Store ideas without implementing them immediately.
+### `research/research-backlog.md`
 
-20. Reproducibility Requirements
+Store ideas without implying that they should be implemented.
 
-Every experiment result must be reconstructable as far as external model APIs permit.
+### `research/novelty/`
+
+Store the evidence and decision from each novelty gate.
+
+---
+
+## 18. Reproducibility Requirements
 
 Persist:
 
-experiment config
+- resolved experiment config;
+- exact task dataset/version;
+- exact capability/environment version;
+- provider/model identifier;
+- model parameters;
+- source Git SHA;
+- execution timestamp;
+- dependency lockfile;
+- raw traces;
+- normalized results.
 
-exact task dataset version
+If a provider cannot provide deterministic seeds or immutable model snapshots, document the limitation.
 
-exact tool-space version
+Do not imply stronger reproducibility than the external API permits.
 
-provider/model identifier returned/used
+---
 
-model parameters
-
-source Git commit SHA
-
-execution timestamp
-
-dependency lockfile
-
-raw traces
-
-normalized results
-
-If a provider does not expose deterministic seeds or immutable model snapshots, document that limitation rather than pretending results are perfectly reproducible.
-
-21. Cost Controls
-
-The harness should support cheap development.
+## 19. Cost Controls
 
 Required safeguards:
 
-configurable maximum tasks per run
+- configurable max tasks per run;
+- configurable repetitions;
+- dry-run/config validation;
+- optional run-size/request-count preview;
+- explicit provider/model selection;
+- no accidental large experiment grids;
+- paid integration tests excluded by default.
 
-configurable repetitions
+Workflow:
 
-dry-run/config validation
+```text
+1-3 task smoke test
+        |
+        v
+verify traces and evaluator
+        |
+        v
+small full condition
+        |
+        v
+inspect evidence
+        |
+        v
+only then scale
+```
 
-optional estimated/request-count summary before a sweep
+Frontier models are validation instruments, not the default development loop.
 
-provider/model selected by config/environment
+---
 
-no accidental default to very large experiment grids
-
-Development workflow:
-
-run 1-3 tasks
-
-verify trace/evaluator correctness
-
-run complete small condition
-
-inspect results
-
-only then increase repetitions/models
-
-Frontier-model sweeps should be intentional validation steps, not the default debugging path.
-
-22. Testing Requirements
+## 20. Testing Requirements
 
 Unit tests should cover at least:
 
-config parsing/validation
+- configuration validation;
+- task loading;
+- tool-space loading;
+- environment identity/version handling;
+- deterministic evaluator;
+- trace serialization;
+- result serialization;
+- synthetic tool behaviour;
+- comparison logic.
 
-task loading
+Provide integration tests using a deterministic fake model adapter.
 
-tool-space loading
+Default test execution must never make paid model API calls.
 
-deterministic evaluator
+---
 
-trace serialization
+## 21. Environment and Secrets
 
-result serialization
+Provider credentials must use environment variables.
 
-synthetic tool behaviour
+Example:
 
-experiment comparison logic
-
-Provide integration tests that can run without paid model APIs by using a deterministic fake model adapter.
-
-Paid-provider tests must be explicitly marked and excluded from the default test suite.
-
-No test suite should make billable API calls unexpectedly.
-
-23. Environment and Secrets
-
-Use environment variables for provider credentials.
-
-Provide .env.example, for example:
-
+```text
 ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
+```
 
-.env and credentials must be gitignored.
+Provide `.env.example`.
 
-Never persist credentials in raw provider responses or traces.
+Gitignore `.env` and all credential-bearing material.
 
-24. Documentation Requirements
+Never store credentials in traces or raw provider payloads.
 
-README
+---
+
+## 22. Documentation and Agent Continuity
+
+### README
 
 Explain:
 
-what Agent Systems Lab is
+- what Agent Systems Lab is;
+- why it exists;
+- current research status;
+- installation;
+- test commands;
+- how to run the current experiment;
+- result/trace locations;
+- how to define tasks and environments;
+- how research gates work.
 
-current research programmes
+### AGENTS.md
 
-installation
+Create a concise, agent-neutral instruction file for any coding agent working in this repository.
 
-configuration
+It should include at minimum:
 
-how to start synthetic MCP server if required separately
+- read `SPEC.md` before major work;
+- preserve experimental transparency;
+- distinguish calibration from frontier research;
+- do not implement a new research programme without a selected novelty-gated question;
+- do not add heavy agent frameworks without explicit approval;
+- do not silently change experimental controls;
+- preserve raw traces and negative results;
+- prefer deterministic evaluation;
+- add tests for harness changes;
+- never make paid API calls in default tests;
+- do not optimize experiments to confirm hypotheses;
+- document methodological compromises;
+- treat unexplained behaviour as potential research data;
+- keep platform work subordinate to research questions.
 
-how to run Experiment 001
+### CLAUDE.md
 
-where results and traces are stored
+If Claude Code is used, create a root-level `CLAUDE.md` that imports:
 
-how to add a new task
+```text
+@AGENTS.md
+```
 
-how to add a new tool-space variant
+Add only Claude Code-specific workflow guidance that is genuinely useful.
 
-how to add a new model adapter
+Do not duplicate the full specification.
 
+### Continuity expectation for any AI agent
+
+An agent joining the project should be able to read:
+
+```text
+SPEC.md
 AGENTS.md
+research/experiment-log.md
+research/observations.md
+research/novelty/
+```
 
-Create instructions for coding agents working in the repository.
+and answer:
 
-At minimum tell them:
+1. What is the researcher's long-term goal?
+2. What has already been built?
+3. What has actually been observed?
+4. Which findings are calibration versus potentially novel?
+5. What research question is currently active?
+6. What must not be implemented yet?
+7. What is the next decision or experiment?
 
-preserve experimental transparency
+If these files do not make those answers clear, update the documentation.
 
-do not add agent frameworks without explicit approval
+---
 
-do not silently alter experimental controls
+## 23. Implementation Milestones
 
-preserve raw traces
+These milestones establish the **research instrument**. They are not a commitment to a fixed research roadmap.
 
-prefer deterministic evaluation
-
-add tests for harness changes
-
-never make paid API calls from tests by default
-
-do not optimize experiments to produce the expected hypothesis
-
-document methodological compromises
-
-25. Implementation Milestones
-
-Milestone 0 - Repository foundation
+### Milestone 0 - Repository foundation
 
 Deliver:
 
-Python project
-
-dependencies
-
-directory structure
-
-lint/type/test setup
-
-README skeleton
-
-AGENTS.md
-
-.env.example
+- Python project;
+- dependencies;
+- minimal directory structure;
+- lint/type/test setup;
+- README skeleton;
+- `AGENTS.md`;
+- `CLAUDE.md` if Claude Code is in use;
+- `.env.example`.
 
 Acceptance:
 
+```bash
 uv sync
 uv run pytest
+```
 
 works on a clean clone without provider credentials.
 
-Milestone 1 - Deterministic synthetic MCP environment
+### Milestone 1 - Deterministic synthetic MCP environment
 
 Deliver:
 
-synthetic data fixtures
-
-five baseline MCP tools
-
-five overlapping customer tools
-
-tests for tool behaviour
+- synthetic fixture data;
+- five baseline MCP tools;
+- five overlapping calibration tools;
+- tests for deterministic tool behaviour.
 
 Acceptance:
 
-Every tool returns deterministic fixture data and can be invoked through the MCP client layer.
+Every tool can be invoked through the real MCP client layer and returns deterministic fixture data.
 
-Milestone 2 - Core experiment harness
+### Milestone 2 - Core experiment harness
 
 Deliver:
 
-task loader
-
-tool-space loader
-
-experiment config
-
-model adapter interface
-
-trace recorder
-
-deterministic evaluator
-
-normalized result model
-
-Parquet persistence
+- task loader;
+- tool-space/environment loader;
+- experiment config;
+- model adapter interface;
+- fake deterministic model adapter;
+- trace recorder;
+- deterministic evaluator;
+- normalized result model;
+- Parquet persistence.
 
 Acceptance:
 
-A fake model adapter can execute a complete experiment with no external APIs.
+A fake adapter can execute a complete experiment without external APIs.
 
-Milestone 3 - First real provider
+### Milestone 3 - First real provider
 
-Deliver one production provider adapter, preferably Anthropic first if Claude is the initial experimental subject.
+Implement one real provider adapter.
+
+If Claude is the initial experimental subject, Anthropic is a reasonable first choice.
 
 Acceptance:
 
-A 1-3 task smoke experiment can execute against a configured provider and save complete traces/results.
+A 1-3 task smoke experiment can run against the configured provider and persist complete evidence.
 
-Milestone 4 - Experiment 001
+### Milestone 4 - Phase 0 calibration
 
 Deliver:
 
-20-30 baseline tasks
-
-baseline tool-space
-
-semantic-overlap tool-space
-
-experiment config
-
-comparison summary
-
-simple chart
+- 20-30 simple deterministic tasks;
+- baseline condition;
+- semantic-overlap condition;
+- experiment config;
+- comparison summary;
+- regression extraction;
+- simple plot.
 
 Acceptance:
 
-A single command runs the experiment and produces inspectable results comparing the two conditions.
+The researcher can inspect both aggregate results and every individual regressed task.
 
-Milestone 5 - Analysis ergonomics
+### Milestone 5 - Analysis ergonomics
 
-Deliver:
+Deliver only what is necessary to make research iteration efficient:
 
-DuckDB result querying
-
-run inspection
-
-regression-task extraction
-
-condition comparison
+- DuckDB querying;
+- run inspection;
+- regression extraction;
+- condition comparison.
 
 Acceptance:
 
-The researcher can quickly answer: "Which tasks succeeded in baseline but failed after the new tools were introduced?"
+The researcher can quickly answer questions such as:
 
-Milestone 6 - Second provider
+> "Which tasks succeeded before the capability change and failed after it?"
 
-Only after Milestones 0-5 are stable.
+### Research Gate 1 - Select first frontier question
 
-Add another provider adapter and run the same experiment unchanged.
+After Milestones 0-5:
 
-Milestone 7 - Memory experiment foundation
+**Do not continue automatically.**
 
-Only after the initial tool-space lab is trustworthy.
+1. summarize calibration results;
+2. record observations;
+3. inspect unexpected behaviour;
+4. perform current-literature novelty search;
+5. select a frontier research question;
+6. write its novelty review and hypothesis/exploratory objective;
+7. only then define the next implementation milestone.
 
-Implement persistent memory interfaces and the first no-memory/full-history/summary comparison.
+There is intentionally **no pre-written Milestone 6**.
 
-26. Coding-Agent Execution Instructions
+The evidence determines Milestone 6.
 
-If an autonomous coding agent is implementing this specification, it should work in milestone order.
+---
 
-For each milestone:
+## 24. Coding-Agent Execution Instructions
 
-inspect current repository state
+If an autonomous coding agent implements this specification:
 
-propose only necessary architecture decisions
+For each implementation milestone:
 
-implement the smallest coherent slice
+1. inspect repository state;
+2. read relevant research/documentation context;
+3. propose only necessary architecture decisions;
+4. implement the smallest coherent slice;
+5. add or update tests;
+6. run test/lint/type checks;
+7. update documentation where state changed;
+8. summarize exactly what changed;
+9. identify deviations from this specification;
+10. stop at the milestone boundary.
 
-add/adjust tests
+Do not build future milestones early because they appear easy.
 
-run tests/lint/type checks
+Do not introduce speculative abstractions.
 
-update relevant docs
+If a decision may materially alter experimental methodology, surface it for researcher review instead of silently choosing.
 
-summarize exactly what changed
+If current published work appears to make a planned research direction redundant, say so.
 
-identify any deviation from this spec and why
+Do not treat the specification as evidence that a research hypothesis is novel. Novelty is time-sensitive and must be rechecked.
 
-Do not build future milestones early merely because they appear straightforward.
+---
 
-Do not add speculative abstractions without a demonstrated current need.
+## 25. Definition of Done for the Initial Instrument
 
-When the specification leaves a minor implementation detail open, choose the simplest transparent implementation and document the decision.
+The lab is established when:
 
-If a decision could materially alter experimental methodology, do not silently choose. Record it clearly for researcher review.
+1. a clean clone installs and tests locally;
+2. deterministic synthetic MCP capabilities exist;
+3. deterministic calibration tasks exist;
+4. one real model can execute those tasks through the MCP environment;
+5. every run preserves detailed raw traces;
+6. results are stored in normalized Parquet;
+7. DuckDB can compare conditions;
+8. Phase 0 baseline-vs-overlap calibration can run from a declared config;
+9. individual regressions can be extracted and inspected;
+10. research observation/hypothesis/novelty files exist;
+11. an external coding/research agent can understand the project state from repo documentation;
+12. the researcher can understand the complete agent loop without relying on a general agent framework.
 
-27. Definition of Done for the Initial Project
+At this point:
 
-The initial project is considered successfully established when:
+> **Stop building the platform. Start selecting research questions.**
 
-A clean clone can install and test locally.
+---
 
-A deterministic synthetic MCP server exposes baseline and overlapping tools.
+## 26. First Instrument Success Criterion
 
-20-30 deterministic tasks exist with known expected tool calls and answers.
+A valid first outcome might look like:
 
-At least one real model provider can execute the task set using the MCP tools.
+```text
+Phase 0 calibration
 
-Every run preserves detailed raw traces.
+Baseline tool-space:      28/30 successful
+Overlap tool-space:       23/30 successful
 
-Results are persisted in normalized Parquet format.
+Regressed tasks: 5
+Improved tasks: 0
+Unchanged tasks: 25
 
-DuckDB can compare conditions.
+Complete traces: available
+```
 
-Experiment 001 compares baseline vs semantic-overlap tool-spaces.
+Or it might show little/no regression.
 
-The output identifies individual regressed tasks, not just aggregate accuracy.
+Either result is acceptable if the experiment is controlled and trustworthy.
 
-Research observation/hypothesis files exist and are ready for ongoing use.
+The purpose is to establish:
 
-The system is simple enough that the researcher can understand the complete agent loop without relying on a general agent framework.
+> **This lab can manipulate an agent environment, observe model behaviour, preserve evidence, and compare conditions reliably.**
 
-At that point, stop adding platform features and inspect the experimental results.
+The next question is not automatically:
 
-The next work should be determined by observed behaviour, not by the original architecture backlog.
+> "Which tool variable should we sweep next?"
 
-28. First Research Success Criterion
+It is:
 
-The first meaningful success is not "the platform is feature complete."
+> **"Given what we observed and what the current research landscape already knows, what is the most valuable unanswered question we can test next?"**
 
-It is something like:
-
-Baseline tool-space:       28/30 successful
-Overlapping tool-space:    22/30 successful
-
-Six previously successful tasks regressed.
-Their complete traces are available for inspection.
-
-At that point the research question becomes:
-
-Why did those six regress?
-
-That question, and the experiments it produces, should drive the evolution of the repository.
+That question should drive the evolution of `agent-systems-lab`.

@@ -1,12 +1,12 @@
 # Agent Systems Lab - Research & Build Specification
 
 **Status:** Active research specification  
-**Version:** 2.3  
+**Version:** 2.4  
 **Repository:** `agent-systems-lab`
 
-### Version 2.3 methodological clarifications
+### Version 2.4 methodological clarifications
 
-Version 2.3 preserves the existing research direction and milestone structure. It adds provider-boundary requirements discovered while planning Milestone 3.
+Version 2.4 preserves the existing research direction, milestone structure, and novelty gate. It adds proportionate quantitative-design discipline before Phase 0 and records design constraints that apply only if persistent memory later becomes novelty-gated experimental material.
 
 Earlier versions established:
 
@@ -36,6 +36,18 @@ Version 2.3 additionally clarifies:
 - provider-specific model controls such as thinking/effort must be explicit experimental controls when available;
 - do not use `temperature: 0` as a generic determinism control for models that do not support it;
 - real-provider smoke validation is a harness check, not Phase 0 research.
+
+Version 2.4 additionally clarifies:
+
+- quantitative experiments must pre-register the unit of analysis/generalization, treatment of repeated runs, aggregation rule, fixed stopping/sample budget, and the smallest effect considered practically meaningful;
+- repeated runs of the same task are within-task replicates, not additional independent task observations when the claim generalizes across tasks;
+- A/A or equivalent repeatability checks may characterize apparatus/model stochasticity, but raw repeatability spread is not a universal threshold below which a real A/B effect cannot exist;
+- formal power/minimum-detectable-effect calculations should be used when defensible variability information exists, but precision must not be invented when it does not;
+- secondary metrics are descriptive/diagnostic unless independently pre-registered to carry a claim; post-observation promotion requires a new metric definition set/version and a clearly new analysis;
+- if persistent memory later reaches the model, its content, retrieval/presentation policy, provenance, and exact retrieved material become model-visible experimental material and must be declared, fingerprinted, persisted, and auditable;
+- naturally acquired/learned memory must be distinguished from synthetic, hand-authored, or transformed control material rather than treating one provenance type as universally required;
+- memory retention/invalidation/revalidation policies are experimental conditions when compared, and their operational cost must be observable as an outcome;
+- these memory constraints do not authorize a memory implementation or bypass the mandatory novelty gate.
 
 
 ---
@@ -301,6 +313,62 @@ Key question:
 
 > **When does remembered experience become technical debt for an agent?**
 
+#### 4.3.1 Design constraints for any future memory experiment
+
+This subsection is **not authorization to build a memory subsystem or to select memory as the next research question**. It records methodological constraints now so that implementation convenience cannot silently determine a later experiment. Any substantial memory work still requires an explicitly selected question that passes the novelty gate in Section 3.
+
+If persistent memory later becomes experimental material:
+
+**Memory is a model-visible surface.**
+
+Retrieved memory that enters a model request can change behaviour just as tool names, descriptions, schemas, system instructions, or provider serialization can. Future memory-enabled experiments must therefore preserve enough evidence to distinguish:
+
+- a canonical representation/descriptor of the memory material available to the experiment;
+- a deterministic `fp1` fingerprint for the relevant canonical memory surface;
+- the exact memory entries actually retrieved for each run/turn, in their presented order;
+- the exact placement/presentation of those entries in the model/provider request;
+- the provenance required to reproduce or explain how those entries were produced.
+
+The exact persisted provider request remains the final model-visible evidence. Existing leakage rules continue to apply: audit the recorded request, not merely the code that constructed it. Old tool names, schemas, versions, environment identifiers, condition labels, or other capability-change information contained in memory are direct potential confounds and must be inspectable.
+
+**Retrieval and presentation policy are experimental factors.**
+
+What is retrieved, how many entries are retrieved, ranking/order, filtering, truncation, recency rules, and where/how memory is inserted into the request can independently create, amplify, suppress, or erase an observed effect. These choices must not remain invisible defaults inside harness code.
+
+A memory-enabled experiment must declare the relevant retrieval/presentation policy in its experimental configuration and preserve a deterministic fingerprint of that policy or of the canonical memory configuration that contains it. The exact implementation shape should be chosen only when a novelty-gated experiment requires it.
+
+**Memory provenance must be explicit.**
+
+Do not impose a universal rule that all experimental memory must be trace-derived. Each memory set/entry must instead declare its origin, for example:
+
+- trace-derived learned experience;
+- synthetic controlled material;
+- hand-authored controlled material;
+- transformed/derived memory.
+
+For an experiment intended to represent **naturally acquired agent experience**, the memory must be reproducibly derived from persisted traces of prior real runs, and the derivation itself must be reproducible from recorded evidence.
+
+Synthetic or hand-authored memory is permitted when scientifically useful as controlled experimental material, but it must be labelled as such and must never be presented as naturally acquired experience.
+
+**Provenance should make dependency/blast-radius questions answerable.**
+
+When a future memory representation is designed, entries should retain the relevant provenance available at creation/derivation time, including where applicable:
+
+- source run/trace identifiers;
+- environment version;
+- tool-space identifier;
+- relevant environment, model-surface, and provider-surface fingerprints;
+- relevant tool/schema/capability identity or version;
+- derivation/transformation identity where memory was not copied directly from a trace.
+
+Do not freeze a detailed memory schema now. The exact fields belong to the novelty-gated experiment that needs them.
+
+**Memory policies are experimental conditions when compared.**
+
+Policies such as retain-all, wipe-all, recency-based retention, provenance-scoped invalidation, and provenance-scoped revalidation can themselves change behaviour. If compared, they must be expressible as declarative experiment conditions with the rest of the harness held constant as far as the hypothesis permits.
+
+Measure policy cost as well as behavioural outcome. Relevant cost may include additional provider requests, tool calls, input/output tokens, latency, or other reproducible resource usage.
+
 ### 4.4 Provenance-aware memory
 
 Investigate whether memories should carry dependencies on the environment that produced them.
@@ -492,6 +560,7 @@ Prioritize:
 11. **Minimal platform bias** - build only infrastructure needed to answer current research questions.
 12. **Novelty awareness** - continuously distinguish calibration, replication, engineering work, and genuinely new research.
 13. **Model-visible surface discipline** - any content that reaches the model is part of the experiment. This includes tool names, descriptions, input/output schemas, generated schema titles, enum labels, server instructions, examples, annotations, and provider-specific tool serialization. Experimental intent or condition labels must never leak into that surface unless they are themselves the variable being tested.
+14. **Memory-surface discipline** - if future work places persistent memory into a model request, memory content, selection/retrieval, ordering, truncation, provenance, and presentation are experimental material rather than hidden storage utilities. Preserve the exact retrieved material and provider-facing request evidence, and do not build a memory subsystem before a novelty-gated question requires it.
 
 ---
 
@@ -916,9 +985,14 @@ For future memory research, the trace design should also be capable of recording
 - memory candidates;
 - memory writes;
 - retrieval queries;
-- retrieved memories;
-- memory provenance;
-- memory invalidation/revalidation events.
+- exact retrieved memories in presented order;
+- retrieval/presentation policy identity or fingerprint;
+- memory provenance and derivation identity;
+- model-visible memory placement/presentation where not already reconstructible from the exact provider request;
+- memory invalidation/revalidation events;
+- incremental provider/tool/token/latency cost attributable to a memory policy where relevant.
+
+The exact persisted provider request remains authoritative for what memory the model actually saw.
 
 Do not implement the full memory subsystem initially.
 
@@ -993,6 +1067,71 @@ DuckDB must be usable directly against results without requiring application cod
 ---
 
 ## 14. Evaluation
+
+### 14.1 Quantitative design and interpretation
+
+Keep statistical design proportionate to the size and purpose of the lab. The objective is not to impose one universal frequentist framework; it is to prevent stochastic model behaviour, repeated measures, flexible stopping, or weak power from being mistaken for a scientific conclusion.
+
+Before observing the real experimental comparison, pre-register:
+
+- the **unit of analysis/generalization** appropriate to the claim;
+- how repeated runs of the same task are treated;
+- the aggregation rule used to produce task-level and condition-level metrics;
+- the planned task count, repetition count, and provider/request budget;
+- the stopping/replacement rule for invalid executions;
+- the smallest effect on the primary metric considered **practically meaningful**;
+- the intended uncertainty/reporting method.
+
+**Repeated runs are not automatically independent task observations.**
+
+Repetitions of the same task within a condition may be useful within-task replicates for estimating model stochasticity. When a claim is intended to generalize across tasks, those repetitions must remain nested within task rather than being silently counted as additional independent task samples.
+
+Do not impose a universal analysis unit on every future experiment. Run-level, task-level, paired-task, condition-level, or other analysis may be appropriate depending on the hypothesis; the choice and aggregation rule must be declared before results are observed and must not drift during analysis.
+
+**Practical importance and statistical detectability are distinct.**
+
+Declare the smallest effect that would be meaningful for the research question before examining the experimental comparison.
+
+Where prior or pilot variability permits a defensible power or minimum-detectable-effect calculation, record the estimate and its assumptions before the confirmatory comparison. Where it does not, do not invent statistical precision. Use the fixed design, report uncertainty appropriate to the analysis unit, and distinguish among:
+
+- an observed effect below the pre-registered practical threshold;
+- evidence precise enough to be consistent with little/no practically meaningful effect;
+- an experiment whose uncertainty is too large to resolve meaningful from negligible effects.
+
+An underpowered or noisy result must not automatically be described as "no effect."
+
+Do not compute or report post-hoc/"observed power" from the same observed effect as if it were new evidence about sensitivity. If a defensible prospective power or minimum-detectable-effect estimate was not available before the comparison, report the achieved uncertainty/resolution directly instead.
+
+**A/A or equivalent repeatability checks are apparatus measurements.**
+
+An A/A control or equivalent repeatability analysis may be pre-registered when useful for characterising model stochasticity, validating that nominally identical conditions remain identical at the model-visible boundary, or estimating instrument repeatability.
+
+If used:
+
+- the nominal arms must have identical model-visible/provider-visible experimental surfaces unless the label itself is the variable under test;
+- their canonical surface fingerprints should therefore match;
+- logical condition labels must not leak into model-visible content;
+- the observed A/A variability is apparatus/repeatability evidence, not a research result;
+- raw A/A spread must **not** be treated as a universal hard threshold below which a real A/B effect cannot exist;
+- any use of the repeatability estimate in later inference must be declared rather than hidden in analysis code.
+
+**Secondary metrics are diagnostic unless pre-registered otherwise.**
+
+The primary metric carries the headline claim for an experiment unless another claim-bearing metric was independently pre-registered.
+
+Secondary metrics may explain mechanisms, recoveries, failure modes, or unexpected behaviour. After results are observed, a secondary metric must not be silently promoted into the primary story. If a later analysis promotes one to claim-bearing status, create a new metric definition set/version and label the analysis as new rather than retroactively pre-registered.
+
+**Stopping rules must be fixed before the experimental comparison.**
+
+Do not extend task count, repetitions, or provider-request budget merely because a result is weak, surprising, nearly significant, or otherwise tempting.
+
+Operationally invalid executions (for example authentication/billing failures or provider outages that produce no model observation) may be replaced or excluded only according to a declared failure/replacement rule, must retain distinct execution evidence, and must not be confused with inconvenient but valid model outcomes.
+
+The declared rule must also state how unequal valid repetition counts are handled. Replacing invalid executions can preserve equal within-task replication; dropping them can produce unequal precision across tasks/conditions and therefore changes the appropriate aggregation or uncertainty treatment. Do not silently apply an equal-weight analysis that assumes a balanced design when the retained evidence is unbalanced.
+
+If an experiment is intentionally sequential/adaptive, its stopping rule and any required inferential correction must be pre-registered. If a fixed design is extended after looking at results, record the deviation explicitly and do not present the enlarged analysis as if the original stopping rule were preserved.
+
+### 14.2 Metric semantics
 
 Initial evaluation should be deterministic wherever possible.
 
@@ -1097,7 +1236,24 @@ Before the first real Phase 0 run:
 2. record their environment and model-surface fingerprints;
 3. verify that no research-design language leaks into the model-visible surface;
 4. pre-register the primary routing metric and secondary recovery/task-success metrics;
-5. freeze the task set and evaluator definitions for that calibration run.
+5. freeze the task set and evaluator definitions for that calibration run;
+6. pre-register the analysis unit/generalization target, repeated-run aggregation rule, and uncertainty/reporting method;
+7. freeze the exact task count, repetition count, provider/request budget, and stopping/replacement rule;
+8. declare the smallest primary-metric difference considered practically meaningful; for Phase 0 treat any defensible detectability/MDE estimate primarily as an **instrument-sensitivity statement** (what this calibration design can reliably resolve), not as a requirement that calibration must produce a particular regression size;
+9. if an A/A or equivalent repeatability check is used, pre-register it as apparatus calibration and keep it distinct from the baseline-vs-overlap research comparison.
+
+### Phase 0 analysis unit
+
+For the headline Phase 0 baseline-vs-overlap comparison, the **task is the unit of generalization** and repetitions are within-task replicates used to characterise stochasticity.
+
+For the primary routing metric:
+
+1. compute the within-condition primary-metric rate for each frozen task across its repetitions;
+2. compare baseline and overlap as paired task-level values;
+3. summarize condition-level accuracy from those task-level values;
+4. retain all run-level rows and traces as evidence, but do not treat repeated runs of one task as additional independent task samples for claim-bearing interpretation.
+
+This choice is specific to Phase 0's frozen paired task set. Future novelty-gated experiments may choose a different unit when their hypothesis requires it, but must pre-register that choice.
 
 ### Initial execution
 
@@ -1107,11 +1263,13 @@ While debugging:
 - one model;
 - one run.
 
-Once the harness is trustworthy:
+Once the harness is trustworthy, the planning range is:
 
 - approximately 20-30 tasks;
 - one model;
-- at least 3 repetitions if affordable/useful.
+- at least 3 repetitions where budget permits.
+
+The actual Phase 0 pre-registration must replace those planning ranges with an **exact** frozen task count, repetition count, and provider/request budget before observing baseline-vs-overlap results.
 
 ### Required outputs
 

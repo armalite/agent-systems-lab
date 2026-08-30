@@ -74,7 +74,11 @@ Rules:
 
 Do not build until a selected, gated experiment requires it:
 
-- persistent memory subsystems, memory provenance, revalidation or invalidation machinery;
+- persistent memory subsystems, memory provenance, revalidation or invalidation machinery.
+  If memory is ever introduced after the novelty gate, its content, retrieval/presentation
+  policy, and provenance become **model-visible experimental material** under the same evidence,
+  fingerprinting, and leakage discipline as any other model-visible surface (`SPEC.md` s4.3.1,
+  s6.14, s12). This is not authorization to build it;
 - self-healing / autonomous repair of capability surfaces;
 - adaptive or learned capability-selection layers;
 - large benchmark matrices or multi-model sweeps;
@@ -109,6 +113,12 @@ module when it has real content.
   non-determinism and the absence of immutable model snapshots when relevant.
 - Prefer deterministic evaluation. LLM-as-judge is only ever an explicit, named evaluator type -
   never an invisible default - and never when a deterministic answer exists.
+- **Never extend task count, repetitions, or provider budget after looking at results** because
+  the result is weak, surprising, nearly significant, or otherwise tempting. A post-observation
+  extension is a deviation and a new analysis, and must be recorded as one (`SPEC.md` s14.1).
+- An underpowered, noisy, or unresolved comparison is not "no effect" - report the achieved
+  uncertainty instead. Never compute post-hoc/observed power from the observed effect and present
+  it as evidence of sensitivity (`SPEC.md` s14.1).
 
 ---
 
@@ -256,8 +266,20 @@ canonical statement and the section references below are the place to check the 
 - The trace and result design must preserve the **complete ordered tool-call sequence**
   (`SPEC.md` s12, s13). Derived fields such as `first_tool_correct`, `expected_tool_used`, and
   `tool_recovery_success` come from that trace; a run is never collapsed to one selected tool.
-- Primary routing and secondary recovery/task-success metrics must be **pre-registered before
-  real model results are observed** (`SPEC.md` s14, s16, Milestone 4).
+- **Quantitative design must be pre-registered before the real comparison is observed**
+  (`SPEC.md` s14.1, s16): analysis/generalization unit, treatment of repeated runs, aggregation
+  rule, exact task/repetition/provider-request budget, stopping and invalid-execution rule,
+  practical-effect threshold, and uncertainty approach - alongside the primary and secondary
+  metrics themselves.
+- When a claim generalizes across tasks, repetitions of one task are **within-task replicates**.
+  Never count them as additional independent task observations (`SPEC.md` s14.1, s16).
+- Secondary metrics are diagnostic unless pre-registered as claim-bearing. Promoting one after
+  results are observed requires a **new metric definition set/version** and must be labelled a
+  new analysis, never presented as pre-registered (`SPEC.md` s14.1).
+- Operationally invalid runs may be replaced or excluded **only** under the pre-registered rule,
+  keeping distinct execution evidence. If retained repetitions end up unbalanced, the analysis
+  must account for that rather than silently assuming an equal-weight balanced design
+  (`SPEC.md` s14.1).
 - Real MCP stays in the execution path for actual experiments; unit tests may exercise the
   underlying deterministic behaviour directly. Traces must distinguish model behaviour, MCP
   transport behaviour, deterministic tool execution, and evaluator decisions (`SPEC.md` s12).

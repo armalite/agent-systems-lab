@@ -1,0 +1,79 @@
+id: harness_check_tasks_v1
+version: "1.0.0"
+
+# A deliberately tiny dataset whose only purpose is to exercise every harness code path with a
+# scripted adapter. This is NOT the Phase 0 calibration dataset: that is 20-30 tasks, arrives in
+# Milestone 4, and requires a pre-registration record first.
+
+tasks:
+  - id: hc_001_correct_first_call
+    prompt: "What is the email address of customer C102?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C102}
+      answer: {email: priya.r@example.test}
+    answer_strategy: contains_facts
+    metadata: {domain: customer, scenario: correct_first_call}
+
+  - id: hc_002_wrong_tool_then_recover
+    prompt: "Which city is customer C104 in?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C104}
+      answer: {city: Lagos}
+    answer_strategy: contains_facts
+    metadata: {domain: customer, scenario: wrong_tool_then_recover}
+
+  - id: hc_003_bad_arguments_then_recover
+    prompt: "What is the account status of customer C109?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C109}
+      answer: {value: active}
+    answer_strategy: exact_match
+    metadata: {domain: customer, scenario: bad_arguments_then_recover}
+
+  - id: hc_004_wrong_tool_no_recovery
+    prompt: "What is the email address of customer C110?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C110}
+      answer: {email: amara.n@example.test}
+    answer_strategy: contains_facts
+    metadata: {domain: customer, scenario: wrong_tool_no_recovery}
+
+  - id: hc_005_unknown_tool_then_recover
+    prompt: "Which office is employee E104 assigned to?"
+    expected:
+      tool: get_employee
+      arguments: {employee_id: E104}
+      answer: {office: Porto Alegre}
+    answer_strategy: contains_facts
+    metadata: {domain: employee, scenario: unknown_tool_then_recover}
+
+  - id: hc_006_unnecessary_extra_call
+    prompt: "Which city is customer C107 in?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C107}
+      answer: {city: Sapporo}
+    answer_strategy: contains_facts
+    metadata: {domain: customer, scenario: unnecessary_extra_call}
+
+  - id: hc_007_no_tool_call
+    prompt: "What is the status of order O204?"
+    expected:
+      tool: get_order
+      arguments: {order_id: O204}
+      answer: {value: pending}
+    answer_strategy: exact_match
+    metadata: {domain: order, scenario: no_tool_call}
+
+  - id: hc_008_failure_no_answer
+    prompt: "What amount is due on invoice I304?"
+    expected:
+      tool: get_invoice
+      arguments: {invoice_id: I304}
+      answer: {value: 391.10, type: number}
+    answer_strategy: typed_scalar
+    metadata: {domain: invoice, scenario: failure_no_answer}

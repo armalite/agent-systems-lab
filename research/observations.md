@@ -30,6 +30,63 @@ instrument, not about agent behaviour.
 
 ---
 
+## 2026-08-30 - Observation O-002 (apparatus, not a research result)
+
+**Classification:** Methodological / apparatus. Milestone 2. **No model was involved and no
+experiment had been run.** A second instance of the O-001 failure mode, found at a different
+boundary.
+
+### Observation
+
+Building the harness surfaced a third channel through which experimental design reaches the
+model: **tool-call identifiers echoed back in the conversation**. The scripted adapter initially
+minted call ids of the form `{task_id}-{tool_space_id}-{turn}-{index}`. Those ids are returned
+to the model inside the assistant turn and the following tool result, so every request after the
+first tool call contained the string `customer_overlap_v1` or `customer_baseline_v1` - the
+condition label, i.e. the manipulated variable, named directly in model-visible context.
+
+It was caught by an audit that reads the **persisted trace** rather than the source: the check
+that no condition identifier appears in a `MODEL_REQUEST` payload.
+
+### Conditions
+
+Found while extending the O-001 leakage audit from the MCP boundary to the adapter boundary.
+Nothing else changed.
+
+### Unexpected detail
+
+O-001's leaks came from schema generation and server identity - metadata. This one came from an
+**identifier the harness itself invented**, and it entered model-visible context by being echoed
+back through conversation history rather than by being declared anywhere. Both the tool
+definitions and the system prompt were clean; the leak lived in the transcript.
+
+The generalisation is sharper than O-001's: it is not only *authored* and *generated* content
+that must be audited, but anything the harness synthesises that ends up in the message history.
+Real provider APIs echo tool-use ids the same way, so this is not an artifact of the fake
+adapter.
+
+### Why it matters
+
+The leaked string is the condition label. A model able to read it could in principle condition
+its behaviour on which experimental arm it is in - the most direct confound available for the
+Phase 0 comparison.
+
+### Resolution
+
+Call ids are now opaque and position-derived (`call_{turn}_{index}`): unique within a run,
+deterministic, and carrying no task or condition information. The task/condition-qualified string
+is retained as `provider_request_id`, which is recorded as provider metadata and never enters the
+conversation. A test asserts that no condition identifier appears in any `MODEL_REQUEST` payload
+- system instructions, rendered tools, or messages.
+
+### Follow-up
+
+Milestone 3 must repeat this audit against the real provider-facing request, since an adapter may
+introduce identifiers, wrappers, or cache keys of its own. The standing rule is now: **audit the
+recorded request, not the code that builds it.**
+
+---
+
 ## 2026-08-30 - Observation O-001 (apparatus, not a research result)
 
 **Classification:** Methodological / apparatus. Milestone 1. **No model was involved and no

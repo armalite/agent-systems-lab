@@ -205,34 +205,42 @@ If those answers are not clear from the repository, fixing the documentation is 
 
 *Keep this section accurate. It is the fastest answer to "what exists?" for a new agent.*
 
-**Current milestone:** Milestone 1 - deterministic synthetic MCP environment. **Complete.**
+**Current milestone:** Milestone 2 - core experiment harness. **Complete.**
 
 **Implemented:**
 
-- *M0* - `uv`-managed Python 3.12 project; `agent_lab` package with a `--version`-only Typer CLI;
-  ruff, pyright (strict), pytest; `paid` marker deselected by default and guarded by tests;
-  `.env.example`; `results/` gitignored; README; research notebook files.
-- *M1* - `agent_lab.synthetic`: checked-in JSON fixtures (12 records each of customers, orders,
-  invoices, products, employees, referential integrity enforced at load); pure deterministic
-  tool implementations; two named tool-spaces (`customer_baseline_v1` with the five baseline
-  tools, `customer_overlap_v1` adding five overlapping customer tools); a thin `MCPServer` stdio
-  adapter selecting the surface at launch. `agent_lab.mcp.client`: minimal stdio client helper
-  plus a canonical tool-surface projection. Overlap design and rationale recorded in
-  `src/agent_lab/synthetic/README.md` before any model experiment.
+- *M0* - `uv`-managed Python 3.12 project; `--version` CLI; ruff, pyright (strict), pytest;
+  `paid` marker deselected by default and guarded by tests; `.env.example`; research notebook.
+- *M1* - `agent_lab.synthetic`: JSON fixtures, pure deterministic tools, two tool-spaces
+  (`customer_baseline_v1`, `customer_overlap_v1`), thin stdio `MCPServer` adapter selecting the
+  surface at launch. `agent_lab.mcp.client`: stdio client + canonical tool-surface projection.
+- *M2* - the harness. `environments/` (EnvironmentDescriptor, ModelSurface, `fp1:sha256`
+  fingerprints, MCP loader); `experiments/` (task loading with declared answer strategies,
+  experiment config, runner owning the agent loop, result derivation); `models/` (adapter
+  protocol, deterministic scripted fake); `evals/` (answer strategies, versioned metric
+  definition sets); `tracing/` (ordered JSONL events with layer tags); `storage/` (explicit
+  Arrow schema, DuckDB-queryable Parquet); `agent-lab validate` / `run`; the
+  `experiments/harness_check/` self-check dataset.
 
-**Architectural invariant (enforced by test):** `models.py`, `data.py`, `tools.py`, and
-`toolspaces.py` must never import `mcp`. The deterministic layer stays provable without a
-transport, which is what will let a trace separate an environment fault from a protocol fault.
+**Architectural invariants (each enforced by test):**
 
-**Not yet implemented:** experiment harness, task loader, tool-space/environment *loader*, model
-adapter interface, fake deterministic adapter, trace recorder, deterministic evaluator,
-normalized result schema, Parquet persistence (M2); real provider adapter (M3); Phase 0
-calibration dataset and experiment (M4); DuckDB analysis ergonomics (M5).
+- `synthetic/{models,data,tools,toolspaces}.py` never import `mcp`.
+- The runner owns the agent loop; an adapter produces exactly one model turn.
+- `derive_result` reads only trace events and ignores `EVALUATION_COMPLETED`, so re-derivation
+  from a persisted trace is non-circular and asserted equal to what was written.
+- The environment fingerprint and the model-surface fingerprint are distinct: `serverInfo` and
+  server instructions move the former and must not move the latter.
+- No provider SDK is declared or importable; the runner refuses any non-scripted adapter.
+
+**Not yet implemented:** real provider adapter and run-time paid opt-in (M3); Phase 0
+calibration dataset, pre-registration record, and comparison/plot (M4); DuckDB analysis
+ergonomics, regression extraction, `summarize`/`compare`/`inspect` (M5).
 **Nothing in this repository can call a model.**
 
 **Active research question:** none. Phase 0 is calibration only, and no novelty gate has been run.
 
-**Observations recorded:** none - no agent runs have been executed.
+**Observations recorded:** O-001 and O-002, both apparatus findings, both model-visible surface
+leaks caught before any model experiment. Neither is a research result.
 
 **Standing decisions carried forward.** `SPEC.md` v2.1 absorbed most of these; the spec is the
 canonical statement and the section references below are the place to check the detail.
@@ -255,6 +263,12 @@ canonical statement and the section references below are the place to check the 
 - **Model-visible surface discipline** (`SPEC.md` s6.13, s9.4): every string and schema field
   that reaches the model is experimental material - tool names, descriptions, input and output
   schemas, pydantic-generated schema titles, docstrings on result models, enum labels,
-  annotations, server identity, and server instructions. Research-design vocabulary
-  (`baseline`, `overlap`, `calibration`, `experiment`, condition identifiers, and the fact of
-  being apparatus at all) must never appear there. Guarded by tests in `tests/test_mcp_server.py`.
+  annotations, server identity, server instructions, and **anything the harness synthesises
+  that ends up in the message history** - including tool-call ids echoed back in the conversation
+  (Observation O-002). Research-design vocabulary (`baseline`, `overlap`, `calibration`,
+  `experiment`, condition identifiers, and the fact of being apparatus at all) must never appear
+  there. Audit the **recorded request**, not the code that builds it. Guarded by
+  `tests/test_mcp_server.py` and `tests/test_model_visible_audit.py`.
+- **Evidence authority is raw trace > normalized result row > aggregate summary** (`SPEC.md`
+  s18). If a derived row disagrees with a valid trace, the trace wins and the derivation is the
+  bug. Derived fields must be reproducible from the trace alone.

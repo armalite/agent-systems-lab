@@ -19,14 +19,14 @@ trustworthy, non-obvious, reproducible observation - not a large feature set.
 
 ## Current status
 
-**Milestone 1 complete: deterministic synthetic MCP environment.** Nothing in this repository
-can call a model yet.
+**Milestone 2 complete: core experiment harness.** A complete experiment runs end to end with a
+deterministic fake adapter. Nothing in this repository can call a model yet.
 
 | Milestone | State |
 |---|---|
 | M0 - repository foundation | ✅ complete |
 | M1 - deterministic synthetic MCP environment | ✅ complete |
-| M2 - core experiment harness | not started |
+| M2 - core experiment harness | ✅ complete |
 | M3 - first real provider adapter | not started |
 | M4 - Phase 0 calibration experiment | not started |
 | M5 - analysis ergonomics (DuckDB) | not started |
@@ -67,14 +67,23 @@ Default `pytest` never makes a paid model-provider API call. Provider-hitting te
 
 ## Running experiments
 
-Not yet implemented - there is no harness and no model integration. The CLI currently exposes
-only:
+Experiments are declarative. Validate one without executing it:
 
 ```bash
-uv run agent-lab --version
+uv run agent-lab validate experiments/harness_check/experiment.yaml
 ```
 
-Experiment commands arrive with the milestones that implement the machinery behind them.
+Execute it:
+
+```bash
+uv run agent-lab run experiments/harness_check/experiment.yaml
+```
+
+`harness_check` is an instrument self-check driven by a deterministic **scripted** adapter. It
+makes no external API calls and produces no evidence about agent behaviour. There is no provider
+integration and no paid execution path; the runner refuses any non-scripted adapter.
+
+`summarize`, `compare`, and `inspect` arrive with Milestone 5.
 
 ## The synthetic environment
 
@@ -96,13 +105,43 @@ design, determinism guarantees, and the documented intent behind the overlapping
 
 ## Results and traces
 
-Not yet implemented. When they exist: raw JSONL traces and normalized Parquet results are written
-under `results/`, which is gitignored - experiment output is a reproducible artifact, not source.
+Each execution writes a self-contained directory under `results/` (gitignored - experiment output
+is a reproducible artifact, not source):
+
+```text
+results/<experiment_id>/<execution_id>/
+  manifest.json                    versions, git SHA + dirty flag, lockfile hash, fingerprints
+  resolved_config.json             the fully resolved config and the frozen task set
+  environments/<tool_space>.json   environment descriptor + model surface, with both fingerprints
+  traces/<run_id>.jsonl            complete ordered raw trace, one file per run
+  results.parquet                  normalized rows, derived from those traces
+```
+
+**The raw trace is authoritative.** Normalized rows are derived from it and are reproducible from
+it; a test re-derives every row from the persisted JSONL and requires equality. Summaries rank
+below both.
+
+A logical `run_id` (`<experiment>/<condition>/<task>/r<n>`) is stable across executions, while a
+physical `execution_id` keeps reruns from overwriting evidence.
+
+Results are queryable directly with DuckDB, no application code required:
+
+```bash
+duckdb -c "SELECT tool_space_id, avg(first_call_routing_correct::INT) FROM 'results/**/results.parquet' GROUP BY 1"
+```
 
 ## Defining tasks and environments
 
-Not yet implemented (Milestones 1-2). Tasks, tool-spaces, and experiments will be declarative
-files rather than code, so new experiments mostly add data rather than rewriting the harness.
+Tasks and experiments are declarative YAML under `experiments/<name>/`; tool-spaces are declared
+in `agent_lab.synthetic.toolspaces`. A new experiment normally adds data, not harness code.
+
+Each task declares its own deterministic answer-evaluation strategy (`exact_match`,
+`contains_facts`, or `typed_scalar`) - there is deliberately no permissive generic matcher. The
+strategy and its expected facts are frozen experimental material.
+
+Metric semantics live in versioned definition sets (`agent_lab.evals.metrics`). To change a
+metric, add a new set with a new id; never edit one in place, since that would silently
+reinterpret results already on disk.
 
 ## Research gates
 

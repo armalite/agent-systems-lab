@@ -1,0 +1,74 @@
+id: harness_check_scripts_v1
+version: "1.0.0"
+
+# Explicit scripted model behaviour. The adapter never reads a task's expected tool or answer,
+# so every behaviour exercised here is stated outright rather than inferred from ground truth.
+#
+# `scenario` is a readability label. Metrics never read it: outcomes are derived from the trace.
+#
+# Most scripts are wildcard (`tool_space: "*"`), so identical model behaviour meets a different
+# capability surface in each condition. hc_002 is scripted per condition to prove that
+# condition-specific keying works.
+
+scripts:
+  - task_id: hc_001_correct_first_call
+    scenario: correct_first_call
+    turns:
+      - tool_calls: [{name: get_customer, arguments: {customer_id: C102}}]
+      - text: "The email address for customer C102 is priya.r@example.test."
+
+  # Overlap condition: reaches for the near-alias tool first, then recovers.
+  - task_id: hc_002_wrong_tool_then_recover
+    tool_space: customer_overlap_v1
+    scenario: wrong_tool_then_recover
+    turns:
+      - tool_calls: [{name: customer_information, arguments: {customer_id: C104}}]
+      - tool_calls: [{name: get_customer, arguments: {customer_id: C104}}]
+      - text: "Customer C104 is based in Lagos."
+
+  # Baseline condition: the same intent, but the alias does not exist here.
+  - task_id: hc_002_wrong_tool_then_recover
+    tool_space: customer_baseline_v1
+    scenario: wrong_tool_then_recover_unknown
+    turns:
+      - tool_calls: [{name: customer_information, arguments: {customer_id: C104}}]
+      - tool_calls: [{name: get_customer, arguments: {customer_id: C104}}]
+      - text: "Customer C104 is based in Lagos."
+
+  - task_id: hc_003_bad_arguments_then_recover
+    scenario: bad_arguments_then_recover
+    turns:
+      - tool_calls: [{name: get_customer, arguments: {customer_id: C999}}]
+      - tool_calls: [{name: get_customer, arguments: {customer_id: C109}}]
+      - text: "active"
+
+  - task_id: hc_004_wrong_tool_no_recovery
+    scenario: wrong_tool_no_recovery
+    turns:
+      - tool_calls: [{name: get_order, arguments: {order_id: C110}}]
+      - text: "I could not determine the email address for customer C110."
+
+  - task_id: hc_005_unknown_tool_then_recover
+    scenario: unknown_tool_then_recover
+    turns:
+      - tool_calls: [{name: fetch_employee_record, arguments: {employee_id: E104}}]
+      - tool_calls: [{name: get_employee, arguments: {employee_id: E104}}]
+      - text: "Employee E104 is assigned to the Porto Alegre office."
+
+  - task_id: hc_006_unnecessary_extra_call
+    scenario: unnecessary_extra_call
+    turns:
+      - tool_calls: [{name: get_customer, arguments: {customer_id: C107}}]
+      - tool_calls: [{name: get_customer, arguments: {customer_id: C107}}]
+      - text: "Customer C107 is based in Sapporo."
+
+  - task_id: hc_007_no_tool_call
+    scenario: no_tool_call
+    turns:
+      - text: "shipped"
+
+  # Emits a call and then never produces a final answer; the run stops at max_steps.
+  - task_id: hc_008_failure_no_answer
+    scenario: failure_no_answer
+    turns:
+      - tool_calls: [{name: get_invoice, arguments: {invoice_id: I304}}]

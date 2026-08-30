@@ -9,7 +9,9 @@ dependencies = [
     # Kept deliberately minimal. Dependencies are added by the milestone that first
     # uses them (see AGENTS.md s6), not because they appear in SPEC.md s7.
     "mcp>=2.1.1",       # M1: real MCP server and client
+    "pyarrow>=25.0.1",  # M2: Parquet result persistence
     "pydantic>=2.13.5", # M1: typed fixture records and tool result envelopes
+    "pyyaml>=6.0.3",    # M2: declarative task/experiment configuration
     "typer>=0.12",      # M0: CLI entry point
 ]
 
@@ -21,6 +23,8 @@ dev = [
     "pytest>=8",
     "ruff>=0.6",
     "pyright>=1.1.380",
+    "duckdb>=1.5.5",    # M2 tests only: prove Parquet is queryable without app code
+    "types-pyyaml>=6.0.12.20260815",
 ]
 
 [build-system]

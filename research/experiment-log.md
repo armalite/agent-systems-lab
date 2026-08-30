@@ -60,6 +60,40 @@ records the commit, result paths, findings, limitations, and the next question.
 
 ---
 
+## 2026-08-30 - Milestone 2: core experiment harness
+
+- **Type:** Instrument build (not an experiment). No model was involved; no external API was
+  contacted.
+- **Commit:** uncommitted working tree at time of writing (branch `main`, parent `186f666`).
+- **Delivered:** canonical `EnvironmentDescriptor` and `ModelSurface` with separate `fp1:sha256`
+  fingerprints; task loading with declared answer strategies; experiment config with a config
+  fingerprint covering referenced content; single-turn model adapter protocol; deterministic
+  scripted fake adapter; runner owning the agent loop and emitting ordered JSONL traces;
+  versioned metric definition sets; result derivation from traces alone; Parquet persistence
+  with an explicit Arrow schema; `agent-lab validate` / `run`; the `experiments/harness_check/`
+  self-check (8 tasks x 2 conditions x 2 repetitions = 32 runs).
+- **Dependencies added:** `pyarrow`, `pyyaml` (runtime); `duckdb`, `types-PyYAML` (dev only).
+- **Result paths:** `results/harness_check_001/<execution_id>/`. These are instrument self-checks
+  and are **not** research evidence.
+- **Verification:** 177 tests pass; ruff and pyright (strict) clean. Every normalized row was
+  re-derived from its persisted trace and asserted equal to what was written. Two executions
+  produced identical canonical traces and identical rows outside volatile fields. The
+  model-surface fingerprint was shown not to move when `serverInfo` or server instructions
+  change, while the environment fingerprint does.
+- **Methodological findings:** Observation **O-002** - the scripted adapter initially embedded
+  the tool-space id in tool-call ids, which are echoed back into the conversation, placing the
+  condition label directly in model-visible context. Call ids are now opaque. This is the same
+  failure mode as O-001 at a third boundary; the standing rule is now to audit the *recorded
+  request*, not the code that builds it.
+- **Limitations:** no provider adapter, no paid path, no Phase 0 dataset, no pre-registration
+  record, no comparison or plotting, no analysis tooling. The scripted adapter is a calibration
+  weight and says nothing about agent behaviour. Token usage is null rather than zero because the
+  fake reports none.
+- **Next:** Milestone 3 (first real provider adapter, with run-time paid opt-in), on researcher
+  approval.
+
+---
+
 ## Phase 0 pre-registration (required before Milestone 4 runs)
 
 Before any Phase 0 calibration run is executed, and **before its results are observed**, record

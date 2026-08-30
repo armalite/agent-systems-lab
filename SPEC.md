@@ -1,18 +1,32 @@
 # Agent Systems Lab - Research & Build Specification
 
 **Status:** Active research specification  
-**Version:** 2.1  
+**Version:** 2.2  
 **Repository:** `agent-systems-lab`
 
-### Version 2.1 methodological clarifications
+### Version 2.2 methodological clarifications
 
-Version 2.1 preserves the v2.0 research direction and milestone structure. It clarifies several experiment-design requirements discovered while establishing Milestones 0-1:
+Version 2.2 preserves the v2.0/v2.1 research direction and milestone structure. It incorporates several load-bearing M2 decisions before the experiment harness is implemented.
+
+Version 2.1 established:
 
 - every string or schema field that reaches a model is experimental material;
 - the complete ordered tool-call sequence is primary evidence and must not be collapsed into a single selected-tool field;
 - Phase 0 routing/recovery metrics must be pre-registered before real model results are observed;
 - environment/tool-surface fingerprints should represent canonical model-relevant capability definitions rather than incidental wire serialization;
 - provider execution that can incur cost requires explicit run-time opt-in even when credentials are configured.
+
+Version 2.2 additionally clarifies:
+
+- distinguish the canonical MCP/environment descriptor from the exact surface actually presented to a model;
+- preserve and fingerprint model-visible surface separately when it differs from the underlying environment;
+- define a substantive tool call for Phase 0 metrics;
+- exact argument matching treats unexpected arguments as incorrect for the Phase 0 primary metric;
+- `tool_recovery_success` is nullable when no recovery was required;
+- remove the redundant/ambiguous normalized `arguments_correct` field;
+- deterministic answer evaluation must use a declared task-level matching rule rather than an ad hoc generic substring heuristic;
+- distinguish stable logical `run_id` from physical `execution_id`;
+- raw trace is authoritative over derived rows and summaries.
 
 
 ---
@@ -643,20 +657,25 @@ environment:
   fingerprint: "..."
 ```
 
-The environment fingerprint should represent a deterministic canonical form of the **experimentally relevant capability surface**, not incidental protocol bytes. At minimum, when available, it should incorporate:
+Persist a deterministic canonical **EnvironmentDescriptor** for the semantic MCP/environment state observed by the harness. It may include stable server identity/instructions, declared environment version, capability metadata, and the canonical tool surface. Exclude incidental wire details such as JSON-RPC request IDs, timing, cursor values, and raw envelope serialization.
+
+Also persist a distinct deterministic **model-surface representation/fingerprint** for the content actually presented to the model adapter. This is the scientifically relevant object when asking whether a model-visible surface changed.
+
+Do not assume that metadata visible to the MCP client is automatically visible to the model. For example, MCP `serverInfo` may be observed by the harness but must not be included in the model-surface fingerprint unless the harness/adapter actually presents it to the model.
+
+At minimum, when exposed to the model, the model-surface representation should incorporate:
 
 - tool names;
 - model-visible descriptions;
 - input schemas;
 - output schemas;
-- tool versions or declared environment versions;
-- response contracts where they affect model-visible behaviour;
-- server instructions or annotations when they are exposed to the model;
-- other experimentally relevant capability metadata.
+- annotations/titles/enums or other generated schema metadata;
+- server instructions/identity only if they are actually included in the model request;
+- system instructions or other capability-related context supplied by the harness when relevant.
 
 Canonicalization should use deterministic ordering and stable serialization. Do not hash raw MCP wire bytes merely because they are available.
 
-The harness should additionally preserve the actual provider-facing request/tool representation in the raw trace, because a provider adapter may transform the canonical MCP surface before it reaches the model.
+The raw trace must preserve the actual adapter request. In Milestone 3, when a real provider adapter may re-serialize or transform tools again, preserve the exact provider-facing representation as separate evidence and, if useful for comparison, fingerprint that representation as well.
 
 Do not overdesign environment versioning before Milestone 2. Establish only enough structure that later experiments can distinguish V1 from V2 without ambiguity.
 
@@ -678,9 +697,14 @@ expected:
 metadata:
   domain: customer
   difficulty: baseline
+
+answer_evaluation:
+  strategy: contains_facts
 ```
 
 Tool-selection correctness and final-answer correctness must be independently measurable.
+
+Final-answer evaluation must be deterministic and declared with the task/task-set before results are observed. Do not use one permissive generic substring rule for every answer type. The initial harness may support a deliberately small set of deterministic strategies such as normalized exact match, required-fact containment, or typed scalar comparison. The chosen strategy and expected facts are part of the frozen task definition.
 
 ### 9.4 Tool-space definition
 
@@ -850,6 +874,10 @@ Each event should include:
 
 The trace is the source of truth for tool behaviour. Preserve the **complete ordered tool-call sequence**, including every call attempt, arguments, results, errors, retries, and subsequent recovery. Do not reduce a run to one singular `selected_tool` value at ingestion time.
 
+Use a stable logical `run_id` to identify the experiment/condition/task/repetition combination, and a distinct `execution_id` to identify a physical invocation of the experiment so reruns do not overwrite evidence.
+
+For Phase 0 single-tool metrics, a **substantive tool call** is any invocation emitted by the model, including an unknown/hallucinated tool name or a call with invalid arguments. Harness-initiated transport retries of an identical call are not additional substantive model calls. Calls that are impossible to attribute to model output must be represented separately rather than silently counted or discarded.
+
 Where possible, traces should distinguish:
 
 - model request/response behaviour;
@@ -880,6 +908,7 @@ At minimum:
 
 ```text
 run_id
+execution_id
 experiment_id
 experiment_classification
 timestamp
@@ -892,6 +921,7 @@ model_parameters
 environment_id
 environment_version
 environment_fingerprint
+model_surface_fingerprint
 
 task_id
 task_set
@@ -915,7 +945,6 @@ unnecessary_tool_call_count
 tool_recovery_success
 
 expected_arguments
-arguments_correct
 
 expected_answer
 actual_answer
@@ -957,14 +986,21 @@ For Phase 0 and later experiments, the primary and secondary metrics must be **p
 
 For the simple Phase 0 calibration tasks, the default primary routing metric should be:
 
-> The first substantive tool call is the expected tool and contains the correct identifying argument(s).
+> The first substantive tool call is the expected tool and contains exactly the expected identifying argument(s).
+
+For this metric, argument key/value comparison is order-insensitive but exact after schema-valid canonicalization: missing expected arguments, incorrect values, invalid values, or unexpected extra arguments make the argument component incorrect.
 
 Secondary metrics should distinguish at minimum:
 
-- whether the expected tool was eventually used correctly;
+- whether the expected tool was eventually used;
+- whether it was eventually used with correct arguments;
 - whether the agent recovered after an initially incorrect call;
 - final task success;
 - number of incorrect or unnecessary tool calls.
+
+`tool_recovery_success` is **null / not applicable** when the first substantive call already satisfies the primary routing metric. It is `true` or `false` only when recovery was actually required.
+
+Final `task_success` remains independent of tool-use correctness and must use the task's pre-declared deterministic answer-evaluation strategy.
 
 A different primary definition may be used when a future task genuinely requires multi-tool planning, but it must be declared before observing results for that experiment.
 
@@ -1033,8 +1069,8 @@ The tool-space is the intended manipulated variable.
 
 Before the first real Phase 0 run:
 
-1. record the exact baseline and overlap canonical tool surfaces;
-2. record their environment/tool-surface fingerprints;
+1. record the exact baseline and overlap canonical environment descriptors and model-visible surfaces;
+2. record their environment and model-surface fingerprints;
 3. verify that no research-design language leaks into the model-visible surface;
 4. pre-register the primary routing metric and secondary recovery/task-success metrics;
 5. freeze the task set and evaluator definitions for that calibration run.
@@ -1170,6 +1206,12 @@ Persist:
 If a provider cannot provide deterministic seeds or immutable model snapshots, document the limitation.
 
 Do not imply stronger reproducibility than the external API permits.
+
+Evidence authority is:
+
+> **raw trace > normalized result row > aggregate summary**
+
+Normalized rows and summaries are derived conveniences. If they disagree with a valid raw trace, the trace wins and the derivation bug must be fixed.
 
 ---
 
@@ -1366,9 +1408,11 @@ Every tool can be invoked through the real MCP client layer and returns determin
 
 Deliver:
 
-- task loader;
+- task loader with declared deterministic answer-evaluation strategy;
 - tool-space/environment loader;
-- canonical environment/tool-surface representation and fingerprint;
+- canonical EnvironmentDescriptor + environment fingerprint;
+- canonical model-visible surface representation + model-surface fingerprint;
+- stable logical run identity plus physical execution identity;
 - experiment config;
 - model adapter interface;
 - fake deterministic model adapter;
@@ -1383,8 +1427,12 @@ A fake adapter can execute a complete experiment without external APIs, and:
 
 - the raw trace preserves every ordered tool call rather than a singular selection;
 - derived routing/recovery fields can be reproduced from that trace;
-- the environment fingerprint is stable for an unchanged canonical model-relevant capability surface and changes when that surface changes;
-- model-visible capability metadata can be inspected without exposing internal research-design annotations.
+- the environment descriptor/fingerprint is stable for unchanged semantic MCP/environment state;
+- the model-surface fingerprint is stable when the actual adapter-visible capability surface is unchanged and changes when that surface changes;
+- MCP-client-visible metadata that is not passed to the model does not falsely change the model-surface fingerprint;
+- model-visible capability metadata can be inspected without exposing internal research-design annotations;
+- result rows are reproducibly derived from raw traces;
+- repeated physical executions can share a logical `run_id` without overwriting one another.
 
 ### Milestone 3 - First real provider
 
@@ -1403,7 +1451,7 @@ Provider execution that can incur cost must require explicit run-time opt-in. Me
 Before execution, deliver a pre-registration record containing:
 
 - frozen task set;
-- exact baseline and overlap canonical tool surfaces/fingerprints;
+- exact baseline and overlap canonical environment descriptors plus model-visible surfaces/fingerprints;
 - primary routing metric definition;
 - secondary recovery/task-success metric definitions;
 - evaluator rules;

@@ -1,0 +1,41 @@
+id: harness_check_001
+classification: harness_check
+
+research_question: >-
+  Does the harness execute a complete experiment, preserve a complete ordered trace, derive
+  normalized results reproducibly from that trace, and persist queryable evidence - without any
+  external model API?
+
+# Not a research experiment. This is an instrument self-check with a deterministic scripted
+# adapter, and produces no evidence about agent behaviour.
+
+model:
+  provider: fake
+  name: scripted-v1
+  parameters:
+    temperature: 0
+
+adapter:
+  kind: scripted
+  script_set: scripts.yaml
+
+task_set: tasks.yaml
+
+conditions:
+  - customer_baseline_v1
+  - customer_overlap_v1
+
+repetitions: 2
+
+controls:
+  system_instructions: >-
+    You are a customer support assistant. Use the available tools to look up records, then
+    answer the question directly and concisely.
+  max_steps: 4
+  retries: 0
+  randomize_tool_order: false
+
+metric_definition_set: phase0_single_tool_v1
+
+limits:
+  max_tasks: null

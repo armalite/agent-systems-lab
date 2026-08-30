@@ -17,6 +17,44 @@ To find poorly understood behaviour in modern LLM agent systems, turn it into co
 experiments, and publish results that are useful to the wider AI community. Success is one
 trustworthy, non-obvious, reproducible observation - not a large feature set.
 
+## How it works
+
+The lab is an experiment runner wrapped around a model interacting with a controlled MCP
+environment. The runner owns the agent loop; the adapter represents a single model turn.
+Everything observable is written to a raw trace, and results are derived from that trace rather
+than recorded alongside it.
+
+```mermaid
+flowchart TB
+    DEF["Experiment definition<br/>tasks, tool-space, model, controls"]
+    DEF --> RUN
+
+    subgraph LOOP["Agent loop - owned by the runner"]
+        direction TB
+        RUN["Experiment Runner"]
+        ADP["Model Adapter<br/>one model turn"]
+        MOD(["Model<br/>Claude, or deterministic fake"])
+        MCP["MCP Client"]
+        SRV["Synthetic MCP Server<br/>deterministic fixtures"]
+
+        RUN -->|"request one turn"| ADP
+        ADP --> MOD
+        MOD -->|"tool call"| ADP
+        ADP --> RUN
+        RUN -->|"dispatch tool call"| MCP
+        MCP --> SRV
+        SRV -->|"tool result"| MCP
+        MCP -->|"observation"| RUN
+    end
+
+    RUN ==>|"every event, in order"| TRACE[("Raw JSONL trace<br/>authoritative evidence")]
+    TRACE --> EVAL["Evaluator<br/>versioned metric set"]
+    EVAL --> PARQ[("results.parquet<br/>derived rows")]
+```
+
+The loop repeats until the model answers without calling a tool, or a step limit is reached. The
+evaluator reads only the trace, so every derived row can be recomputed from the evidence.
+
 ## Current status
 
 **Milestone 3 complete: first real provider.** A complete experiment runs end to end against
@@ -44,7 +82,7 @@ Requires [`uv`](https://docs.astral.sh/uv/). Python 3.12+ is fetched by `uv` if 
 uv sync
 ```
 
-No provider credentials are required, and none are used.
+No provider credentials are required to install or to run the test suite.
 
 ## Development
 
@@ -81,8 +119,7 @@ uv run agent-lab run experiments/harness_check/experiment.yaml
 ```
 
 `harness_check` is an instrument self-check driven by a deterministic **scripted** adapter. It
-makes no external API calls and produces no evidence about agent behaviour. There is no provider
-integration and no paid execution path; the runner refuses any non-scripted adapter.
+makes no external API calls and produces no evidence about agent behaviour.
 
 Cost-incurring providers require explicit per-invocation authorization. Having
 `ANTHROPIC_API_KEY` configured authorizes nothing:
@@ -120,6 +157,37 @@ uv run python -m agent_lab.synthetic.server --tool-space customer_overlap_v1
 
 See [`src/agent_lab/synthetic/README.md`](src/agent_lab/synthetic/README.md) for the fixture
 design, determinism guarantees, and the documented intent behind the overlapping tools.
+
+### What the model actually sees
+
+The environment the harness observes, the surface it intends to present, and the payload a
+provider actually receives are **three different objects**, and the lab does not assume they are
+semantically equivalent. Each transformation drops something.
+
+```mermaid
+flowchart TB
+    ENV["MCP Environment<br/>tools, schemas, serverInfo, instructions"]
+    DESC["EnvironmentDescriptor<br/>what the harness observes"]
+    MS["Canonical Model Surface<br/>what the harness intends to present"]
+    PS["Provider Surface<br/>stable provider-facing capability and config"]
+    REQ["Exact Provider Request<br/>per turn, secrets redacted"]
+    TRACE[("Raw JSONL trace")]
+
+    ENV --> DESC
+    DESC -->|"drops serverInfo, instructions, capabilities<br/>the harness never sends them"| MS
+    MS -->|"drops title, output_schema, annotations<br/>the Anthropic tool schema has no such fields"| PS
+    PS -->|"adds the per-turn conversation/messages"| REQ
+    REQ ==> TRACE
+
+    DESC -.-> F1["environment_fingerprint"]
+    MS -.-> F2["model_surface_fingerprint"]
+    PS -.-> F3["provider_surface_fingerprint"]
+```
+
+The three fingerprints are **comparison aids**: they answer "did this surface change between
+conditions or runs?". The exact provider request is **evidence**: it is preserved verbatim for
+every turn, and carries its own per-turn hash. Confusing the two would be a methodological error,
+so they are deliberately named and stored apart.
 
 ## Results and traces
 

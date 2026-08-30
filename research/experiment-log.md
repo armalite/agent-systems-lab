@@ -34,6 +34,32 @@ records the commit, result paths, findings, limitations, and the next question.
 
 ---
 
+## 2026-08-30 - Milestone 1: deterministic synthetic MCP environment
+
+- **Type:** Instrument build (not an experiment). No model was involved.
+- **Commit:** uncommitted working tree at time of writing (branch `main`, parent `12f7fd9`).
+- **Delivered:** `agent_lab.synthetic` (JSON fixtures, typed records, pure deterministic tool
+  implementations, two declarative tool-spaces, thin stdio `MCPServer` adapter) and
+  `agent_lab.mcp.client` (stdio client helper, canonical tool-surface projection). Overlap design
+  and rationale recorded in `src/agent_lab/synthetic/README.md` **before** any model experiment.
+- **Dependencies added:** `mcp>=2.1.1`, `pydantic>=2.13.5`.
+- **Result paths:** none - no runs executed.
+- **Verification:** all 10 tools invoked directly (no transport) and over a real MCP stdio
+  subprocess; both `tools/list` surfaces confirmed independently (5 vs 10 tools, baseline a
+  strict subset); three separate server subprocesses produced byte-identical results whose
+  SHA-256 also equals the direct, non-MCP path. 79 tests pass; ruff and pyright (strict) clean.
+- **Methodological notes:** two model-visible leakage paths were found and closed before any
+  model experiment - pydantic docstrings serialized into the MCP output schema, and the server
+  identity returned in the initialize result. Recorded in full as Observation O-001 (apparatus,
+  not a research result). The model-visible surface is pinned by committed snapshots so an
+  accidental edit to a control shows up as a reviewable diff, and tests assert that no
+  research-design vocabulary or internal condition identifier reaches the model.
+- **Limitations:** no harness, no tasks, no evaluator, no tracing, no persistence, no model
+  adapter. `search_customers` uses substring matching with no relevance ranking, by design.
+- **Next:** Milestone 2 (core experiment harness), on researcher approval.
+
+---
+
 ## Phase 0 pre-registration (required before Milestone 4 runs)
 
 Before any Phase 0 calibration run is executed, and **before its results are observed**, record

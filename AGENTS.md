@@ -205,34 +205,56 @@ If those answers are not clear from the repository, fixing the documentation is 
 
 *Keep this section accurate. It is the fastest answer to "what exists?" for a new agent.*
 
-**Current milestone:** Milestone 0 - repository foundation. **Complete.**
+**Current milestone:** Milestone 1 - deterministic synthetic MCP environment. **Complete.**
 
-**Implemented:** `uv`-managed Python 3.12 project (`pyproject.toml`, `uv.lock`); `agent_lab`
-package exposing `__version__` and a `--version`-only Typer CLI; ruff, pyright (strict, via
-`pyrightconfig.json`), and pytest configured; `paid` pytest marker deselected by default with
-tests guarding that gate; `.env.example`; `results/` gitignored; README; research notebook files;
-`AGENTS.md`; `CLAUDE.md`. Runtime dependency: `typer` only.
+**Implemented:**
 
-**Not yet implemented:** synthetic MCP environment and fixtures (M1); experiment harness, task and
-tool-space loaders, model adapter interface, fake deterministic adapter, trace recorder,
-deterministic evaluator, normalized result schema, Parquet persistence (M2); real provider adapter
-(M3); Phase 0 calibration dataset and experiment (M4); DuckDB analysis ergonomics (M5).
+- *M0* - `uv`-managed Python 3.12 project; `agent_lab` package with a `--version`-only Typer CLI;
+  ruff, pyright (strict), pytest; `paid` marker deselected by default and guarded by tests;
+  `.env.example`; `results/` gitignored; README; research notebook files.
+- *M1* - `agent_lab.synthetic`: checked-in JSON fixtures (12 records each of customers, orders,
+  invoices, products, employees, referential integrity enforced at load); pure deterministic
+  tool implementations; two named tool-spaces (`customer_baseline_v1` with the five baseline
+  tools, `customer_overlap_v1` adding five overlapping customer tools); a thin `MCPServer` stdio
+  adapter selecting the surface at launch. `agent_lab.mcp.client`: minimal stdio client helper
+  plus a canonical tool-surface projection. Overlap design and rationale recorded in
+  `src/agent_lab/synthetic/README.md` before any model experiment.
+
+**Architectural invariant (enforced by test):** `models.py`, `data.py`, `tools.py`, and
+`toolspaces.py` must never import `mcp`. The deterministic layer stays provable without a
+transport, which is what will let a trace separate an environment fault from a protocol fault.
+
+**Not yet implemented:** experiment harness, task loader, tool-space/environment *loader*, model
+adapter interface, fake deterministic adapter, trace recorder, deterministic evaluator,
+normalized result schema, Parquet persistence (M2); real provider adapter (M3); Phase 0
+calibration dataset and experiment (M4); DuckDB analysis ergonomics (M5).
 **Nothing in this repository can call a model.**
 
 **Active research question:** none. Phase 0 is calibration only, and no novelty gate has been run.
 
 **Observations recorded:** none - no agent runs have been executed.
 
-**Standing decisions carried forward** (agreed with the researcher, not yet implemented):
+**Standing decisions carried forward.** `SPEC.md` v2.1 absorbed most of these; the spec is the
+canonical statement and the section references below are the place to check the detail.
 
 - Dependencies are added by the milestone that first uses them, never because they appear in the
   preferred stack in `SPEC.md` s7.
-- The trace and result design must preserve the **full ordered tool-call sequence**; summary
-  fields such as a single selected tool are derived from it, never substituted for it.
-- `tool_selection_correct` and the primary/secondary routing and recovery metrics must be
-  **pre-registered in `research/experiment-log.md` before any Phase 0 result is observed.**
+- The trace and result design must preserve the **complete ordered tool-call sequence**
+  (`SPEC.md` s12, s13). Derived fields such as `first_tool_correct`, `expected_tool_used`, and
+  `tool_recovery_success` come from that trace; a run is never collapsed to one selected tool.
+- Primary routing and secondary recovery/task-success metrics must be **pre-registered before
+  real model results are observed** (`SPEC.md` s14, s16, Milestone 4).
 - Real MCP stays in the execution path for actual experiments; unit tests may exercise the
-  underlying deterministic behaviour directly. Tracing must distinguish MCP/transport failures
-  from model tool-selection behaviour.
-- Paid provider execution requires an explicit per-run opt-in. Configured credentials must never
-  be sufficient to start a billable run.
+  underlying deterministic behaviour directly. Traces must distinguish model behaviour, MCP
+  transport behaviour, deterministic tool execution, and evaluator decisions (`SPEC.md` s12).
+- Paid provider execution requires an explicit **run-time** opt-in (`SPEC.md` s19, Milestone 3).
+  Configured credentials must never by themselves authorize a billable run.
+- Overlapping calibration tools are genuinely functional and internally consistent with the
+  baseline tools. They must never be made to return wrong or partial data in order to
+  manufacture task failure.
+- **Model-visible surface discipline** (`SPEC.md` s6.13, s9.4): every string and schema field
+  that reaches the model is experimental material - tool names, descriptions, input and output
+  schemas, pydantic-generated schema titles, docstrings on result models, enum labels,
+  annotations, server identity, and server instructions. Research-design vocabulary
+  (`baseline`, `overlap`, `calibration`, `experiment`, condition identifiers, and the fact of
+  being apparatus at all) must never appear there. Guarded by tests in `tests/test_mcp_server.py`.

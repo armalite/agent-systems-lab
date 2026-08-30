@@ -1,0 +1,14 @@
+[
+  {"product_id": "P501", "name": "Harbour Desk Lamp", "category": "lighting", "price": 84.50, "currency": "NZD", "sku": "HDL-7742", "in_stock": true},
+  {"product_id": "P502", "name": "Kestrel Field Notebook", "category": "stationery", "price": 19.95, "currency": "NZD", "sku": "KFN-3318", "in_stock": true},
+  {"product_id": "P503", "name": "Tidewater Insulated Flask", "category": "drinkware", "price": 46.00, "currency": "NZD", "sku": "TIF-9051", "in_stock": false},
+  {"product_id": "P504", "name": "Alder Wall Clock", "category": "homeware", "price": 129.00, "currency": "NZD", "sku": "AWC-2264", "in_stock": true},
+  {"product_id": "P505", "name": "Pelham Canvas Satchel", "category": "bags", "price": 212.75, "currency": "NZD", "sku": "PCS-6187", "in_stock": true},
+  {"product_id": "P506", "name": "Northlight Reading Stand", "category": "furniture", "price": 158.40, "currency": "NZD", "sku": "NRS-4409", "in_stock": false},
+  {"product_id": "P507", "name": "Quarry Ceramic Mug", "category": "drinkware", "price": 27.30, "currency": "NZD", "sku": "QCM-8873", "in_stock": true},
+  {"product_id": "P508", "name": "Basalt Cable Organiser", "category": "accessories", "price": 33.60, "currency": "NZD", "sku": "BCO-1520", "in_stock": true},
+  {"product_id": "P509", "name": "Marlow Linen Throw", "category": "homeware", "price": 96.85, "currency": "NZD", "sku": "MLT-7038", "in_stock": true},
+  {"product_id": "P510", "name": "Verity Pocket Torch", "category": "lighting", "price": 41.20, "currency": "NZD", "sku": "VPT-5596", "in_stock": false},
+  {"product_id": "P511", "name": "Copperfield Pen Set", "category": "stationery", "price": 68.00, "currency": "NZD", "sku": "CPS-2947", "in_stock": true},
+  {"product_id": "P512", "name": "Ridgeway Laptop Sleeve", "category": "bags", "price": 74.15, "currency": "NZD", "sku": "RLS-6612", "in_stock": true}
+]

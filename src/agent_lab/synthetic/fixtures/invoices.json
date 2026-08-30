@@ -1,0 +1,14 @@
+[
+  {"invoice_id": "I301", "order_id": "O201", "customer_id": "C104", "amount_due": 0.00, "currency": "NZD", "status": "paid", "issued_on": "2024-03-03", "due_on": "2024-04-02"},
+  {"invoice_id": "I302", "order_id": "O202", "customer_id": "C101", "amount_due": 84.50, "currency": "NZD", "status": "unpaid", "issued_on": "2024-03-12", "due_on": "2024-04-11"},
+  {"invoice_id": "I303", "order_id": "O203", "customer_id": "C109", "amount_due": 0.00, "currency": "NZD", "status": "void", "issued_on": "2024-03-16", "due_on": "2024-04-15"},
+  {"invoice_id": "I304", "order_id": "O204", "customer_id": "C102", "amount_due": 391.10, "currency": "NZD", "status": "unpaid", "issued_on": "2024-04-02", "due_on": "2024-05-02"},
+  {"invoice_id": "I305", "order_id": "O205", "customer_id": "C107", "amount_due": 0.00, "currency": "NZD", "status": "paid", "issued_on": "2024-04-09", "due_on": "2024-05-09"},
+  {"invoice_id": "I306", "order_id": "O206", "customer_id": "C110", "amount_due": 212.75, "currency": "NZD", "status": "overdue", "issued_on": "2024-04-20", "due_on": "2024-05-20"},
+  {"invoice_id": "I307", "order_id": "O207", "customer_id": "C106", "amount_due": 0.00, "currency": "NZD", "status": "paid", "issued_on": "2024-05-03", "due_on": "2024-06-02"},
+  {"invoice_id": "I308", "order_id": "O208", "customer_id": "C112", "amount_due": 68.00, "currency": "NZD", "status": "unpaid", "issued_on": "2024-05-15", "due_on": "2024-06-14"},
+  {"invoice_id": "I309", "order_id": "O209", "customer_id": "C103", "amount_due": 96.85, "currency": "NZD", "status": "overdue", "issued_on": "2024-05-24", "due_on": "2024-06-23"},
+  {"invoice_id": "I310", "order_id": "O210", "customer_id": "C105", "amount_due": 74.15, "currency": "NZD", "status": "unpaid", "issued_on": "2024-06-05", "due_on": "2024-07-05"},
+  {"invoice_id": "I311", "order_id": "O211", "customer_id": "C108", "amount_due": 0.00, "currency": "NZD", "status": "void", "issued_on": "2024-06-18", "due_on": "2024-07-18"},
+  {"invoice_id": "I312", "order_id": "O212", "customer_id": "C111", "amount_due": 147.65, "currency": "NZD", "status": "paid", "issued_on": "2024-06-29", "due_on": "2024-07-29"}
+]

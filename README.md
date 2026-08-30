@@ -19,12 +19,13 @@ trustworthy, non-obvious, reproducible observation - not a large feature set.
 
 ## Current status
 
-**Milestone 0 complete: repository foundation.** Nothing in this repository can call a model yet.
+**Milestone 1 complete: deterministic synthetic MCP environment.** Nothing in this repository
+can call a model yet.
 
 | Milestone | State |
 |---|---|
 | M0 - repository foundation | ✅ complete |
-| M1 - deterministic synthetic MCP environment | not started |
+| M1 - deterministic synthetic MCP environment | ✅ complete |
 | M2 - core experiment harness | not started |
 | M3 - first real provider adapter | not started |
 | M4 - Phase 0 calibration experiment | not started |
@@ -66,13 +67,32 @@ Default `pytest` never makes a paid model-provider API call. Provider-hitting te
 
 ## Running experiments
 
-Not yet implemented. The CLI currently exposes only:
+Not yet implemented - there is no harness and no model integration. The CLI currently exposes
+only:
 
 ```bash
 uv run agent-lab --version
 ```
 
 Experiment commands arrive with the milestones that implement the machinery behind them.
+
+## The synthetic environment
+
+A deterministic, fixture-backed MCP server is the controlled apparatus for the Phase 0
+calibration. It exposes two named tool-spaces, selected server-side at launch, so the real
+`tools/list` surface differs between conditions:
+
+| Tool-space | Tools |
+|---|---|
+| `customer_baseline_v1` | `get_customer`, `get_order`, `get_invoice`, `get_product`, `get_employee` |
+| `customer_overlap_v1` | those five, plus `find_customer`, `search_customers`, `get_customer_details`, `lookup_customer`, `customer_information` |
+
+```bash
+uv run python -m agent_lab.synthetic.server --tool-space customer_overlap_v1
+```
+
+See [`src/agent_lab/synthetic/README.md`](src/agent_lab/synthetic/README.md) for the fixture
+design, determinism guarantees, and the documented intent behind the overlapping tools.
 
 ## Results and traces
 

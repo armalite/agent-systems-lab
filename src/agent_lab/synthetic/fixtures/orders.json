@@ -1,0 +1,14 @@
+[
+  {"order_id": "O201", "customer_id": "C104", "status": "delivered", "total_amount": 264.35, "currency": "NZD", "placed_on": "2024-03-02", "item_count": 3},
+  {"order_id": "O202", "customer_id": "C101", "status": "shipped", "total_amount": 84.50, "currency": "NZD", "placed_on": "2024-03-11", "item_count": 1},
+  {"order_id": "O203", "customer_id": "C109", "status": "cancelled", "total_amount": 158.40, "currency": "NZD", "placed_on": "2024-03-15", "item_count": 1},
+  {"order_id": "O204", "customer_id": "C102", "status": "pending", "total_amount": 391.10, "currency": "NZD", "placed_on": "2024-04-01", "item_count": 5},
+  {"order_id": "O205", "customer_id": "C107", "status": "delivered", "total_amount": 46.00, "currency": "NZD", "placed_on": "2024-04-08", "item_count": 1},
+  {"order_id": "O206", "customer_id": "C110", "status": "returned", "total_amount": 212.75, "currency": "NZD", "placed_on": "2024-04-19", "item_count": 2},
+  {"order_id": "O207", "customer_id": "C106", "status": "delivered", "total_amount": 129.00, "currency": "NZD", "placed_on": "2024-05-02", "item_count": 1},
+  {"order_id": "O208", "customer_id": "C112", "status": "shipped", "total_amount": 68.00, "currency": "NZD", "placed_on": "2024-05-14", "item_count": 2},
+  {"order_id": "O209", "customer_id": "C103", "status": "delivered", "total_amount": 96.85, "currency": "NZD", "placed_on": "2024-05-23", "item_count": 1},
+  {"order_id": "O210", "customer_id": "C105", "status": "pending", "total_amount": 74.15, "currency": "NZD", "placed_on": "2024-06-04", "item_count": 1},
+  {"order_id": "O211", "customer_id": "C108", "status": "cancelled", "total_amount": 33.60, "currency": "NZD", "placed_on": "2024-06-17", "item_count": 1},
+  {"order_id": "O212", "customer_id": "C111", "status": "delivered", "total_amount": 147.65, "currency": "NZD", "placed_on": "2024-06-28", "item_count": 4}
+]

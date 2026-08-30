@@ -1,0 +1,959 @@
+[
+  {
+    "name": "customer_information",
+    "title": null,
+    "description": "Get information about a customer by customer ID.",
+    "input_schema": {
+      "properties": {
+        "customer_id": {
+          "title": "Customer Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "customer_id"
+      ],
+      "title": "customer_informationArguments",
+      "type": "object"
+    },
+    "output_schema": {
+      "$defs": {
+        "Customer": {
+          "additionalProperties": false,
+          "description": "A customer account.",
+          "properties": {
+            "city": {
+              "title": "City",
+              "type": "string"
+            },
+            "customer_id": {
+              "title": "Customer Id",
+              "type": "string"
+            },
+            "email": {
+              "title": "Email",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "status": {
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          "required": [
+            "customer_id",
+            "name",
+            "email",
+            "city",
+            "status"
+          ],
+          "title": "Customer",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "customer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Customer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "found": {
+          "title": "Found",
+          "type": "boolean"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "found"
+      ],
+      "title": "CustomerResult",
+      "type": "object"
+    }
+  },
+  {
+    "name": "find_customer",
+    "title": null,
+    "description": "Find a customer by their full name.",
+    "input_schema": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "find_customerArguments",
+      "type": "object"
+    },
+    "output_schema": {
+      "$defs": {
+        "Customer": {
+          "additionalProperties": false,
+          "description": "A customer account.",
+          "properties": {
+            "city": {
+              "title": "City",
+              "type": "string"
+            },
+            "customer_id": {
+              "title": "Customer Id",
+              "type": "string"
+            },
+            "email": {
+              "title": "Email",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "status": {
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          "required": [
+            "customer_id",
+            "name",
+            "email",
+            "city",
+            "status"
+          ],
+          "title": "Customer",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "customer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Customer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "found": {
+          "title": "Found",
+          "type": "boolean"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "found"
+      ],
+      "title": "CustomerResult",
+      "type": "object"
+    }
+  },
+  {
+    "name": "get_customer",
+    "title": null,
+    "description": "Retrieve a customer record by its customer ID.",
+    "input_schema": {
+      "properties": {
+        "customer_id": {
+          "title": "Customer Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "customer_id"
+      ],
+      "title": "get_customerArguments",
+      "type": "object"
+    },
+    "output_schema": {
+      "$defs": {
+        "Customer": {
+          "additionalProperties": false,
+          "description": "A customer account.",
+          "properties": {
+            "city": {
+              "title": "City",
+              "type": "string"
+            },
+            "customer_id": {
+              "title": "Customer Id",
+              "type": "string"
+            },
+            "email": {
+              "title": "Email",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "status": {
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          "required": [
+            "customer_id",
+            "name",
+            "email",
+            "city",
+            "status"
+          ],
+          "title": "Customer",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "customer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Customer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "found": {
+          "title": "Found",
+          "type": "boolean"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "found"
+      ],
+      "title": "CustomerResult",
+      "type": "object"
+    }
+  },
+  {
+    "name": "get_customer_details",
+    "title": null,
+    "description": "Retrieve extended details for a customer by customer ID, including account management fields.",
+    "input_schema": {
+      "properties": {
+        "customer_id": {
+          "title": "Customer Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "customer_id"
+      ],
+      "title": "get_customer_detailsArguments",
+      "type": "object"
+    },
+    "output_schema": {
+      "$defs": {
+        "CustomerDetails": {
+          "additionalProperties": false,
+          "description": "A customer account, including account-management detail.",
+          "properties": {
+            "account_manager_id": {
+              "title": "Account Manager Id",
+              "type": "string"
+            },
+            "city": {
+              "title": "City",
+              "type": "string"
+            },
+            "created_on": {
+              "title": "Created On",
+              "type": "string"
+            },
+            "customer_id": {
+              "title": "Customer Id",
+              "type": "string"
+            },
+            "email": {
+              "title": "Email",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "phone": {
+              "title": "Phone",
+              "type": "string"
+            },
+            "segment": {
+              "title": "Segment",
+              "type": "string"
+            },
+            "status": {
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          "required": [
+            "customer_id",
+            "name",
+            "email",
+            "city",
+            "status",
+            "phone",
+            "segment",
+            "account_manager_id",
+            "created_on"
+          ],
+          "title": "CustomerDetails",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "customer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CustomerDetails"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "found": {
+          "title": "Found",
+          "type": "boolean"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "found"
+      ],
+      "title": "CustomerDetailsResult",
+      "type": "object"
+    }
+  },
+  {
+    "name": "get_employee",
+    "title": null,
+    "description": "Retrieve an employee record by its employee ID.",
+    "input_schema": {
+      "properties": {
+        "employee_id": {
+          "title": "Employee Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "employee_id"
+      ],
+      "title": "get_employeeArguments",
+      "type": "object"
+    },
+    "output_schema": {
+      "$defs": {
+        "Employee": {
+          "additionalProperties": false,
+          "properties": {
+            "email": {
+              "title": "Email",
+              "type": "string"
+            },
+            "employee_id": {
+              "title": "Employee Id",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "office": {
+              "title": "Office",
+              "type": "string"
+            },
+            "role": {
+              "title": "Role",
+              "type": "string"
+            }
+          },
+          "required": [
+            "employee_id",
+            "name",
+            "role",
+            "office",
+            "email"
+          ],
+          "title": "Employee",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "employee": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Employee"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "found": {
+          "title": "Found",
+          "type": "boolean"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "found"
+      ],
+      "title": "EmployeeResult",
+      "type": "object"
+    }
+  },
+  {
+    "name": "get_invoice",
+    "title": null,
+    "description": "Retrieve an invoice record by its invoice ID.",
+    "input_schema": {
+      "properties": {
+        "invoice_id": {
+          "title": "Invoice Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "invoice_id"
+      ],
+      "title": "get_invoiceArguments",
+      "type": "object"
+    },
+    "output_schema": {
+      "$defs": {
+        "Invoice": {
+          "additionalProperties": false,
+          "properties": {
+            "amount_due": {
+              "title": "Amount Due",
+              "type": "number"
+            },
+            "currency": {
+              "title": "Currency",
+              "type": "string"
+            },
+            "customer_id": {
+              "title": "Customer Id",
+              "type": "string"
+            },
+            "due_on": {
+              "title": "Due On",
+              "type": "string"
+            },
+            "invoice_id": {
+              "title": "Invoice Id",
+              "type": "string"
+            },
+            "issued_on": {
+              "title": "Issued On",
+              "type": "string"
+            },
+            "order_id": {
+              "title": "Order Id",
+              "type": "string"
+            },
+            "status": {
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          "required": [
+            "invoice_id",
+            "order_id",
+            "customer_id",
+            "amount_due",
+            "currency",
+            "status",
+            "issued_on",
+            "due_on"
+          ],
+          "title": "Invoice",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "found": {
+          "title": "Found",
+          "type": "boolean"
+        },
+        "invoice": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Invoice"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "found"
+      ],
+      "title": "InvoiceResult",
+      "type": "object"
+    }
+  },
+  {
+    "name": "get_order",
+    "title": null,
+    "description": "Retrieve an order record by its order ID.",
+    "input_schema": {
+      "properties": {
+        "order_id": {
+          "title": "Order Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "order_id"
+      ],
+      "title": "get_orderArguments",
+      "type": "object"
+    },
+    "output_schema": {
+      "$defs": {
+        "Order": {
+          "additionalProperties": false,
+          "properties": {
+            "currency": {
+              "title": "Currency",
+              "type": "string"
+            },
+            "customer_id": {
+              "title": "Customer Id",
+              "type": "string"
+            },
+            "item_count": {
+              "title": "Item Count",
+              "type": "integer"
+            },
+            "order_id": {
+              "title": "Order Id",
+              "type": "string"
+            },
+            "placed_on": {
+              "title": "Placed On",
+              "type": "string"
+            },
+            "status": {
+              "title": "Status",
+              "type": "string"
+            },
+            "total_amount": {
+              "title": "Total Amount",
+              "type": "number"
+            }
+          },
+          "required": [
+            "order_id",
+            "customer_id",
+            "status",
+            "total_amount",
+            "currency",
+            "placed_on",
+            "item_count"
+          ],
+          "title": "Order",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "found": {
+          "title": "Found",
+          "type": "boolean"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "order": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Order"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "found"
+      ],
+      "title": "OrderResult",
+      "type": "object"
+    }
+  },
+  {
+    "name": "get_product",
+    "title": null,
+    "description": "Retrieve a product record by its product ID.",
+    "input_schema": {
+      "properties": {
+        "product_id": {
+          "title": "Product Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "product_id"
+      ],
+      "title": "get_productArguments",
+      "type": "object"
+    },
+    "output_schema": {
+      "$defs": {
+        "Product": {
+          "additionalProperties": false,
+          "properties": {
+            "category": {
+              "title": "Category",
+              "type": "string"
+            },
+            "currency": {
+              "title": "Currency",
+              "type": "string"
+            },
+            "in_stock": {
+              "title": "In Stock",
+              "type": "boolean"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "price": {
+              "title": "Price",
+              "type": "number"
+            },
+            "product_id": {
+              "title": "Product Id",
+              "type": "string"
+            },
+            "sku": {
+              "title": "Sku",
+              "type": "string"
+            }
+          },
+          "required": [
+            "product_id",
+            "name",
+            "category",
+            "price",
+            "currency",
+            "sku",
+            "in_stock"
+          ],
+          "title": "Product",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "found": {
+          "title": "Found",
+          "type": "boolean"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "product": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Product"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "found"
+      ],
+      "title": "ProductResult",
+      "type": "object"
+    }
+  },
+  {
+    "name": "lookup_customer",
+    "title": null,
+    "description": "Look up a customer by their email address.",
+    "input_schema": {
+      "properties": {
+        "email": {
+          "title": "Email",
+          "type": "string"
+        }
+      },
+      "required": [
+        "email"
+      ],
+      "title": "lookup_customerArguments",
+      "type": "object"
+    },
+    "output_schema": {
+      "$defs": {
+        "Customer": {
+          "additionalProperties": false,
+          "description": "A customer account.",
+          "properties": {
+            "city": {
+              "title": "City",
+              "type": "string"
+            },
+            "customer_id": {
+              "title": "Customer Id",
+              "type": "string"
+            },
+            "email": {
+              "title": "Email",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "status": {
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          "required": [
+            "customer_id",
+            "name",
+            "email",
+            "city",
+            "status"
+          ],
+          "title": "Customer",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "customer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Customer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "found": {
+          "title": "Found",
+          "type": "boolean"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        }
+      },
+      "required": [
+        "found"
+      ],
+      "title": "CustomerResult",
+      "type": "object"
+    }
+  },
+  {
+    "name": "search_customers",
+    "title": null,
+    "description": "Search customers by a free-text query matching name, email, or city.",
+    "input_schema": {
+      "properties": {
+        "query": {
+          "title": "Query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "title": "search_customersArguments",
+      "type": "object"
+    },
+    "output_schema": {
+      "$defs": {
+        "Customer": {
+          "additionalProperties": false,
+          "description": "A customer account.",
+          "properties": {
+            "city": {
+              "title": "City",
+              "type": "string"
+            },
+            "customer_id": {
+              "title": "Customer Id",
+              "type": "string"
+            },
+            "email": {
+              "title": "Email",
+              "type": "string"
+            },
+            "name": {
+              "title": "Name",
+              "type": "string"
+            },
+            "status": {
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          "required": [
+            "customer_id",
+            "name",
+            "email",
+            "city",
+            "status"
+          ],
+          "title": "Customer",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Matching customers, ordered by customer ID.",
+      "properties": {
+        "customers": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Customer"
+          },
+          "title": "Customers",
+          "type": "array"
+        },
+        "match_count": {
+          "title": "Match Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "match_count"
+      ],
+      "title": "CustomerSearchResult",
+      "type": "object"
+    }
+  }
+]

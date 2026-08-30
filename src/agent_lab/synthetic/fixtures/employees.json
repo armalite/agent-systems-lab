@@ -1,0 +1,14 @@
+[
+  {"employee_id": "E101", "name": "Sandra Whitlock", "role": "Support Engineer", "office": "Dunedin", "email": "s.whitlock@example.test"},
+  {"employee_id": "E102", "name": "Owen Brackley", "role": "Billing Analyst", "office": "Manchester", "email": "obrackley@example.test"},
+  {"employee_id": "E103", "name": "Farida Nasser", "role": "Account Manager", "office": "Dubai", "email": "farida.nasser@example.test"},
+  {"employee_id": "E104", "name": "Gustavo Pinheiro", "role": "Solutions Architect", "office": "Porto Alegre", "email": "g.pinheiro@example.test"},
+  {"employee_id": "E105", "name": "Mei-Ling Chow", "role": "Data Analyst", "office": "Singapore", "email": "mchow@example.test"},
+  {"employee_id": "E106", "name": "Tobias Lindqvist", "role": "Support Engineer", "office": "Uppsala", "email": "t.lindqvist@example.test"},
+  {"employee_id": "E107", "name": "Charlotte Egan", "role": "Account Manager", "office": "Cork", "email": "charlotte.egan@example.test"},
+  {"employee_id": "E108", "name": "Rajesh Bhandari", "role": "Warehouse Lead", "office": "Pune", "email": "rbhandari@example.test"},
+  {"employee_id": "E109", "name": "Nadia Kowalczyk", "role": "Product Specialist", "office": "Gdansk", "email": "n.kowalczyk@example.test"},
+  {"employee_id": "E110", "name": "Bruno Castellanos", "role": "Account Manager", "office": "Valparaiso", "email": "bcastellanos@example.test"},
+  {"employee_id": "E111", "name": "Aisha Rahman", "role": "Finance Controller", "office": "Kuala Lumpur", "email": "aisha.rahman@example.test"},
+  {"employee_id": "E112", "name": "Peter Osei-Bonsu", "role": "Account Manager", "office": "Bristol", "email": "posei@example.test"}
+]

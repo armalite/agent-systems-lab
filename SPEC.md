@@ -1,8 +1,19 @@
 # Agent Systems Lab - Research & Build Specification
 
 **Status:** Active research specification  
-**Version:** 2.0  
+**Version:** 2.1  
 **Repository:** `agent-systems-lab`
+
+### Version 2.1 methodological clarifications
+
+Version 2.1 preserves the v2.0 research direction and milestone structure. It clarifies several experiment-design requirements discovered while establishing Milestones 0-1:
+
+- every string or schema field that reaches a model is experimental material;
+- the complete ordered tool-call sequence is primary evidence and must not be collapsed into a single selected-tool field;
+- Phase 0 routing/recovery metrics must be pre-registered before real model results are observed;
+- environment/tool-surface fingerprints should represent canonical model-relevant capability definitions rather than incidental wire serialization;
+- provider execution that can incur cost requires explicit run-time opt-in even when credentials are configured.
+
 
 ---
 
@@ -457,6 +468,7 @@ Prioritize:
 10. **Unexpected behaviour is data** - do not automatically "fix" unexplained model behaviour before recording it.
 11. **Minimal platform bias** - build only infrastructure needed to answer current research questions.
 12. **Novelty awareness** - continuously distinguish calibration, replication, engineering work, and genuinely new research.
+13. **Model-visible surface discipline** - any content that reaches the model is part of the experiment. This includes tool names, descriptions, input/output schemas, generated schema titles, enum labels, server instructions, examples, annotations, and provider-specific tool serialization. Experimental intent or condition labels must never leak into that surface unless they are themselves the variable being tested.
 
 ---
 
@@ -504,8 +516,15 @@ agent-systems-lab/
 |       |   `-- openai.py
 |       |
 |       |-- mcp/
-|       |   |-- client.py
-|       |   `-- types.py
+|       |   `-- client.py
+|       |
+|       |-- synthetic/
+|       |   |-- fixtures/
+|       |   |-- models.py
+|       |   |-- data.py
+|       |   |-- tools.py
+|       |   |-- toolspaces.py
+|       |   `-- server.py
 |       |
 |       |-- evals/
 |       |   |-- base.py
@@ -532,16 +551,9 @@ agent-systems-lab/
 |       |-- analysis/
 |       |   `-- summaries.py
 |       |
-|       |-- memory/                 # no speculative implementation initially
-|       |   `-- types.py
+|       |-- memory/                 # create only after a novelty-gated memory question requires it
 |       |
 |       `-- cli.py
-|
-|-- servers/
-|   `-- synthetic_tools/
-|       |-- server.py
-|       |-- data.py
-|       `-- tools.py
 |
 |-- experiments/
 |   |-- calibration/
@@ -577,6 +589,8 @@ The exact module names may change for a strong technical reason. Preserve separa
 - analysis.
 
 Do not create empty abstractions merely to match this tree.
+
+The synthetic environment intentionally lives inside the installed `agent_lab` package rather than a top-level `servers/` directory. This keeps deterministic fixture/data/tool logic directly importable and testable without MCP transport while allowing `synthetic/server.py` to remain a thin real-protocol adapter.
 
 ---
 
@@ -629,16 +643,22 @@ environment:
   fingerprint: "..."
 ```
 
-A fingerprint may eventually incorporate:
+The environment fingerprint should represent a deterministic canonical form of the **experimentally relevant capability surface**, not incidental protocol bytes. At minimum, when available, it should incorporate:
 
 - tool names;
-- descriptions;
-- schemas;
-- tool versions;
-- response contracts;
+- model-visible descriptions;
+- input schemas;
+- output schemas;
+- tool versions or declared environment versions;
+- response contracts where they affect model-visible behaviour;
+- server instructions or annotations when they are exposed to the model;
 - other experimentally relevant capability metadata.
 
-Do not overdesign environment versioning during Milestone 0. Establish only enough structure that later experiments can distinguish V1 from V2 without ambiguity.
+Canonicalization should use deterministic ordering and stable serialization. Do not hash raw MCP wire bytes merely because they are available.
+
+The harness should additionally preserve the actual provider-facing request/tool representation in the raw trace, because a provider adapter may transform the canonical MCP surface before it reaches the model.
+
+Do not overdesign environment versioning before Milestone 2. Establish only enough structure that later experiments can distinguish V1 from V2 without ambiguity.
 
 ### 9.3 Task definition
 
@@ -691,6 +711,12 @@ tools:
   - lookup_customer
   - customer_information
 ```
+
+The canonical tool-space definition must capture the model-relevant semantic surface, including tool names, descriptions, schemas, and any other fields actually exposed to the model. Generated schema metadata such as titles or docstring-derived descriptions is not "just implementation detail" if the model can see it.
+
+Condition names, experiment labels, calibration terminology, overlap rationale, and other research-design language must remain internal unless explicitly being studied. Do not leak terms such as `baseline`, `overlap`, `calibration`, or `experiment` into model-visible tool metadata.
+
+Snapshot tests may protect the canonical semantic surface, but should avoid coupling to irrelevant SDK serialization or protocol-envelope details.
 
 ### 9.5 Experiment definition
 
@@ -822,6 +848,17 @@ Each event should include:
 - sequence number;
 - event payload.
 
+The trace is the source of truth for tool behaviour. Preserve the **complete ordered tool-call sequence**, including every call attempt, arguments, results, errors, retries, and subsequent recovery. Do not reduce a run to one singular `selected_tool` value at ingestion time.
+
+Where possible, traces should distinguish:
+
+- model request/response behaviour;
+- MCP transport/protocol behaviour;
+- deterministic underlying tool execution;
+- evaluator decisions.
+
+The raw provider-facing request should preserve the exact tool representation and other model-visible context actually sent to the provider, subject to credential/sensitive-data redaction.
+
 For future memory research, the trace design should also be capable of recording:
 
 - memory candidates;
@@ -864,11 +901,20 @@ tool_count
 tool_names
 
 expected_tool
-selected_tool
-tool_selection_correct
+
+tool_call_sequence
+first_tool
+first_tool_arguments
+first_tool_correct
+first_tool_arguments_correct
+
+expected_tool_used
+expected_tool_used_correctly
+incorrect_tool_call_count
+unnecessary_tool_call_count
+tool_recovery_success
 
 expected_arguments
-actual_arguments
 arguments_correct
 
 expected_answer
@@ -885,6 +931,8 @@ random_seed_if_applicable
 trace_path
 ```
 
+The normalized schema may contain derived convenience fields, but the ordered raw trace remains authoritative. Fields such as `first_tool_correct`, `expected_tool_used`, and `tool_recovery_success` must be derived from pre-registered metric definitions rather than ad hoc interpretation after results are observed.
+
 Store normalized batch results in Parquet.
 
 DuckDB must be usable directly against results without requiring application code.
@@ -897,11 +945,28 @@ Initial evaluation should be deterministic wherever possible.
 
 Score separately:
 
-1. tool selection;
-2. argument correctness;
-3. tool-result handling;
-4. final-answer correctness;
-5. overall task success.
+1. initial routing/tool selection;
+2. initial argument correctness;
+3. eventual use of the expected capability;
+4. recovery after an initially incorrect or unnecessary call;
+5. tool-result handling;
+6. final-answer correctness;
+7. overall task success.
+
+For Phase 0 and later experiments, the primary and secondary metrics must be **pre-registered before real model results are observed**.
+
+For the simple Phase 0 calibration tasks, the default primary routing metric should be:
+
+> The first substantive tool call is the expected tool and contains the correct identifying argument(s).
+
+Secondary metrics should distinguish at minimum:
+
+- whether the expected tool was eventually used correctly;
+- whether the agent recovered after an initially incorrect call;
+- final task success;
+- number of incorrect or unnecessary tool calls.
+
+A different primary definition may be used when a future task genuinely requires multi-tool planning, but it must be declared before observing results for that experiment.
 
 Avoid LLM-as-judge when a deterministic answer is available.
 
@@ -958,11 +1023,21 @@ Keep constant:
 - system instructions;
 - tasks;
 - fixture data;
-- evaluator;
+- evaluator and pre-registered metric definitions;
 - MCP transport;
-- retry policy.
+- retry policy;
+- provider-adapter behaviour;
+- all model-visible content other than the intended tool-space change.
 
 The tool-space is the intended manipulated variable.
+
+Before the first real Phase 0 run:
+
+1. record the exact baseline and overlap canonical tool surfaces;
+2. record their environment/tool-surface fingerprints;
+3. verify that no research-design language leaks into the model-visible surface;
+4. pre-register the primary routing metric and secondary recovery/task-success metrics;
+5. freeze the task set and evaluator definitions for that calibration run.
 
 ### Initial execution
 
@@ -980,10 +1055,13 @@ Once the harness is trustworthy:
 
 ### Required outputs
 
-- success by condition;
-- tool-selection accuracy by condition;
-- per-task regression list;
-- raw traces for regressions;
+- primary first-call routing accuracy by condition;
+- eventual expected-tool-use / recovery accuracy by condition;
+- final task success by condition;
+- incorrect/unnecessary tool-call counts;
+- per-task routing regressions;
+- per-task task-success regressions;
+- raw traces for regressions and representative recoveries;
 - simple comparison chart;
 - notes on any unexpected behaviour.
 
@@ -1104,6 +1182,8 @@ Required safeguards:
 - dry-run/config validation;
 - optional run-size/request-count preview;
 - explicit provider/model selection;
+- **explicit paid-run opt-in at execution time** before any provider call that can incur cost;
+- credentials being present must not by themselves authorize paid execution;
 - no accidental large experiment grids;
 - paid integration tests excluded by default.
 
@@ -1288,17 +1368,23 @@ Deliver:
 
 - task loader;
 - tool-space/environment loader;
+- canonical environment/tool-surface representation and fingerprint;
 - experiment config;
 - model adapter interface;
 - fake deterministic model adapter;
-- trace recorder;
-- deterministic evaluator;
-- normalized result model;
+- trace recorder preserving the complete ordered tool-call sequence;
+- deterministic evaluator with explicit metric definitions;
+- normalized result model derived from the raw trace;
 - Parquet persistence.
 
 Acceptance:
 
-A fake adapter can execute a complete experiment without external APIs.
+A fake adapter can execute a complete experiment without external APIs, and:
+
+- the raw trace preserves every ordered tool call rather than a singular selection;
+- derived routing/recovery fields can be reproduced from that trace;
+- the environment fingerprint is stable for an unchanged canonical model-relevant capability surface and changes when that surface changes;
+- model-visible capability metadata can be inspected without exposing internal research-design annotations.
 
 ### Milestone 3 - First real provider
 
@@ -1310,21 +1396,33 @@ Acceptance:
 
 A 1-3 task smoke experiment can run against the configured provider and persist complete evidence.
 
+Provider execution that can incur cost must require explicit run-time opt-in. Merely configuring API credentials is insufficient authorization to make paid calls. The trace must preserve the actual provider-facing model/tool representation, with credentials and secrets redacted.
+
 ### Milestone 4 - Phase 0 calibration
 
-Deliver:
+Before execution, deliver a pre-registration record containing:
+
+- frozen task set;
+- exact baseline and overlap canonical tool surfaces/fingerprints;
+- primary routing metric definition;
+- secondary recovery/task-success metric definitions;
+- evaluator rules;
+- planned repetitions and comparison method;
+- known limitations.
+
+Then deliver:
 
 - 20-30 simple deterministic tasks;
 - baseline condition;
 - semantic-overlap condition;
 - experiment config;
 - comparison summary;
-- regression extraction;
+- routing-regression and task-success-regression extraction;
 - simple plot.
 
 Acceptance:
 
-The researcher can inspect both aggregate results and every individual regressed task.
+The researcher can inspect both aggregate results and every individual regressed/recovered task, and can verify that metric definitions and model-visible surfaces were fixed before observing the real model results.
 
 ### Milestone 5 - Analysis ergonomics
 

@@ -1,0 +1,50 @@
+id: smoke_anthropic_001
+classification: harness_check
+
+research_question: >-
+  Can a real provider run through exactly the same experimental loop while preserving complete
+  ordered traces, the exact provider-facing request for every turn, and reproducibly derived
+  results?
+
+# Classified as a harness check, not calibration or research (SPEC.md M3, v2.3). It produces no
+# evidence about agent behaviour and is not Phase 0.
+
+model:
+  provider: anthropic
+  name: claude-opus-5
+  parameters:
+    max_tokens: 4096
+    # Declared explicitly rather than inherited from provider defaults, and recorded as
+    # experimental controls. `temperature` is deliberately absent: it is unsupported on current
+    # Claude models and rejected by the API (SPEC.md s18, v2.3).
+    thinking:
+      type: adaptive
+    output_config:
+      effort: high
+
+adapter:
+  kind: anthropic
+
+task_set: tasks.yaml
+
+conditions:
+  - customer_baseline_v1
+
+repetitions: 1
+
+controls:
+  system_instructions: >-
+    You are a customer support assistant. Use the available tools to look up records, then
+    answer the question directly and concisely.
+  max_steps: 4
+  retries: 0
+  randomize_tool_order: false
+
+metric_definition_set: phase0_single_tool_v1
+
+cost_controls:
+  # Hard ceiling, enforced before every provider request. 3 tasks x ~2 turns = ~6 expected.
+  max_provider_requests: 10
+
+limits:
+  max_tasks: null

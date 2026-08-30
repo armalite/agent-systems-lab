@@ -1,0 +1,33 @@
+id: smoke_anthropic_tasks_v1
+version: "1.0.0"
+
+# Three tasks, one per baseline tool. This is an instrument check for the provider adapter, NOT
+# the Phase 0 calibration dataset (20-30 tasks, Milestone 4, pre-registration required first).
+
+tasks:
+  - id: sm_001_customer_email
+    prompt: "What is the email address of customer C102?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C102}
+      answer: {email: priya.r@example.test}
+    answer_strategy: contains_facts
+    metadata: {domain: customer}
+
+  - id: sm_002_order_status
+    prompt: "What is the status of order O204?"
+    expected:
+      tool: get_order
+      arguments: {order_id: O204}
+      answer: {status: pending}
+    answer_strategy: contains_facts
+    metadata: {domain: order}
+
+  - id: sm_003_employee_office
+    prompt: "Which office is employee E104 assigned to?"
+    expected:
+      tool: get_employee
+      arguments: {employee_id: E104}
+      answer: {office: Porto Alegre}
+    answer_strategy: contains_facts
+    metadata: {domain: employee}

@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from agent_lab.environments.surface import fingerprint
 from agent_lab.evals.metrics import METRIC_DEFINITION_SETS
 from agent_lab.experiments.tasks import TaskSet, load_task_set
+from agent_lab.models.provider import PAID_PROVIDERS
 from agent_lab.synthetic.toolspaces import TOOL_SPACES
 
 Classification = Literal["harness_check", "calibration", "characterisation", "frontier"]
@@ -30,11 +31,17 @@ class ModelSpec(BaseModel):
 class AdapterSpec(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    kind: Literal["scripted"]
-    """Only the deterministic scripted adapter exists. Real providers arrive in Milestone 3,
-    and adding one here must be a deliberate, reviewable change."""
+    kind: Literal["scripted", "anthropic"]
+    """`scripted` is deterministic and free. `anthropic` can incur cost and is refused unless
+    the operator passes --allow-paid for that invocation."""
 
-    script_set: str
+    script_set: str | None = None
+
+    def model_post_init(self, _context: Any) -> None:
+        if self.kind == "scripted" and not self.script_set:
+            raise ValueError("the scripted adapter requires a script_set")
+        if self.kind != "scripted" and self.script_set:
+            raise ValueError(f"adapter kind {self.kind!r} does not take a script_set")
 
 
 class Controls(BaseModel):
@@ -47,6 +54,14 @@ class Controls(BaseModel):
     max_steps: int = Field(ge=1)
     retries: int = Field(default=0, ge=0)
     randomize_tool_order: bool = False
+
+
+class CostControls(BaseModel):
+    """Hard ceiling on provider requests, enforced at call time (`SPEC.md` s19)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    max_provider_requests: int = Field(ge=1)
 
 
 class Limits(BaseModel):
@@ -69,6 +84,11 @@ class ExperimentConfig(BaseModel):
     controls: Controls
     metric_definition_set: str
     limits: Limits = Field(default_factory=Limits)
+    cost_controls: CostControls | None = None
+
+    @property
+    def can_incur_cost(self) -> bool:
+        return self.model.provider in PAID_PROVIDERS
 
     def model_post_init(self, _context: Any) -> None:
         if not self.conditions:
@@ -80,6 +100,23 @@ class ExperimentConfig(BaseModel):
                 raise ValueError(
                     f"experiment {self.id}: unknown tool-space {condition!r}; "
                     f"known: {tuple(sorted(TOOL_SPACES))}"
+                )
+        if self.model.provider in PAID_PROVIDERS:
+            if self.cost_controls is None:
+                raise ValueError(
+                    f"experiment {self.id}: provider {self.model.provider!r} can incur cost and "
+                    "requires a cost_controls.max_provider_requests ceiling"
+                )
+            if "temperature" in self.model.parameters:
+                raise ValueError(
+                    f"experiment {self.id}: temperature is unsupported on current Claude models "
+                    "and is rejected by the API; declare thinking/effort controls instead "
+                    "(SPEC.md s18, v2.3)"
+                )
+            if "max_tokens" not in self.model.parameters:
+                raise ValueError(
+                    f"experiment {self.id}: model.parameters.max_tokens must be declared "
+                    "explicitly rather than inherited from a provider default"
                 )
         if self.metric_definition_set not in METRIC_DEFINITION_SETS:
             raise ValueError(
@@ -128,9 +165,11 @@ def load_experiment(path: Path) -> ResolvedExperiment:
     config = ExperimentConfig.model_validate(raw)
     directory = path.parent
     task_set = load_task_set(directory / config.task_set)
-    script_set = load_script_set(directory / config.adapter.script_set)
     task_fp = task_set.fingerprint()
-    script_fp = script_set.fingerprint()
+    if config.adapter.script_set:
+        script_fp = load_script_set(directory / config.adapter.script_set).fingerprint()
+    else:
+        script_fp = fingerprint(None)
     return ResolvedExperiment(
         config=config,
         task_set=task_set,

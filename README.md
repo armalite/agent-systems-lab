@@ -19,15 +19,16 @@ trustworthy, non-obvious, reproducible observation - not a large feature set.
 
 ## Current status
 
-**Milestone 2 complete: core experiment harness.** A complete experiment runs end to end with a
-deterministic fake adapter. Nothing in this repository can call a model yet.
+**Milestone 3 complete: first real provider.** A complete experiment runs end to end against
+`claude-opus-5` through the same loop as the deterministic fake adapter, preserving full traces,
+exact provider requests, and reproducibly derived results.
 
 | Milestone | State |
 |---|---|
 | M0 - repository foundation | ✅ complete |
 | M1 - deterministic synthetic MCP environment | ✅ complete |
 | M2 - core experiment harness | ✅ complete |
-| M3 - first real provider adapter | not started |
+| M3 - first real provider adapter | ✅ complete |
 | M4 - Phase 0 calibration experiment | not started |
 | M5 - analysis ergonomics (DuckDB) | not started |
 | Research Gate 1 - select first frontier question | blocked on M0-M5 |
@@ -83,6 +84,23 @@ uv run agent-lab run experiments/harness_check/experiment.yaml
 makes no external API calls and produces no evidence about agent behaviour. There is no provider
 integration and no paid execution path; the runner refuses any non-scripted adapter.
 
+Cost-incurring providers require explicit per-invocation authorization. Having
+`ANTHROPIC_API_KEY` configured authorizes nothing:
+
+```bash
+uv run agent-lab run experiments/smoke_anthropic/experiment.yaml --allow-paid
+```
+
+Without `--allow-paid` the command prints the model, controls, planned runs, and request budget,
+then refuses. A hard `cost_controls.max_provider_requests` ceiling is enforced before every
+provider request.
+
+Delete disposable harness-check output (and nothing else):
+
+```bash
+uv run agent-lab clean harness-check
+```
+
 `summarize`, `compare`, and `inspect` arrive with Milestone 5.
 
 ## The synthetic environment
@@ -112,7 +130,8 @@ is a reproducible artifact, not source):
 results/<experiment_id>/<execution_id>/
   manifest.json                    versions, git SHA + dirty flag, lockfile hash, fingerprints
   resolved_config.json             the fully resolved config and the frozen task set
-  environments/<tool_space>.json   environment descriptor + model surface, with both fingerprints
+  environments/<tool_space>.json   environment descriptor, model surface, and provider surface,
+                                   each with its own fingerprint
   traces/<run_id>.jsonl            complete ordered raw trace, one file per run
   results.parquet                  normalized rows, derived from those traces
 ```

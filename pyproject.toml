@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
 dependencies = [
+    "anthropic>=1.2.0",  # M3: first real provider adapter (no paid path without --allow-paid)
     # Kept deliberately minimal. Dependencies are added by the milestone that first
     # uses them (see AGENTS.md s6), not because they appear in SPEC.md s7.
     "mcp>=2.1.1",       # M1: real MCP server and client

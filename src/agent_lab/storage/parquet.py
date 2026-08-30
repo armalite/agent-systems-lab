@@ -56,6 +56,14 @@ RESULT_SCHEMA = pa.schema(
         pa.field("environment_version", pa.string()),
         pa.field("environment_fingerprint", pa.string()),
         pa.field("model_surface_fingerprint", pa.string()),
+        pa.field("provider_surface_fingerprint", pa.string()),
+        pa.field("model_requested", pa.string()),
+        pa.field("model_served", pa.string()),
+        pa.field("model_snapshot_available", pa.bool_()),
+        pa.field("model_controls", pa.string()),
+        pa.field("provider_request_ids", pa.list_(pa.string())),
+        pa.field("provider_stop_reason", pa.string()),
+        pa.field("provider_error_kind", pa.string()),
         pa.field("task_id", pa.string()),
         pa.field("task_set", pa.string()),
         pa.field("tool_space_id", pa.string()),
@@ -94,6 +102,7 @@ RESULT_SCHEMA = pa.schema(
 def _row_to_dict(row: ResultRow) -> dict[str, Any]:
     data = row.model_dump(mode="json")
     data["tool_names"] = list(row.tool_names)
+    data["provider_request_ids"] = list(row.provider_request_ids)
     data["tool_call_sequence"] = [call.model_dump(mode="json") for call in row.tool_call_sequence]
     return data
 

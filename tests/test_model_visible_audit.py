@@ -87,25 +87,34 @@ def test_model_surface_fingerprint_is_recorded_on_every_event(execution: Executi
             assert event.model_surface_fingerprint != event.environment_fingerprint
 
 
-def test_no_provider_sdk_is_declared_or_importable() -> None:
-    """Milestone 2 has no provider integration and no paid execution path at all."""
-    pyproject = Path("pyproject.toml").read_text().casefold()
-    dependencies = pyproject.split("[project.scripts]")[0]
-    for banned in ("anthropic", "openai", "litellm", "langchain"):
+def test_paid_execution_safety_replaces_the_sdk_absence_check() -> None:
+    """Milestone 2 asserted no provider SDK was installed. Milestone 3 installs one, so the
+    intent is preserved by `tests/test_paid_execution.py` instead: default work is free and
+    offline, spending needs explicit per-invocation authorization, and budgets are enforced.
+
+    What still must hold here is that no *additional* provider was smuggled in.
+    """
+    dependencies = Path("pyproject.toml").read_text().casefold().split("[project.scripts]")[0]
+    for banned in ("openai", "google-generativeai", "litellm", "langchain", "llama-index"):
         assert banned not in dependencies
 
-    for module in ("anthropic", "openai"):
+    for module in ("openai", "google.generativeai", "litellm", "langchain"):
         with pytest.raises(ImportError):
             __import__(module)
 
 
-def test_runner_rejects_a_non_scripted_adapter() -> None:
-    """A provider adapter cannot be reached even if a config asks for one."""
+def test_the_only_paid_provider_is_anthropic() -> None:
+    from agent_lab.models.provider import PAID_PROVIDERS
+
+    assert frozenset({"anthropic"}) == PAID_PROVIDERS
+
+
+def test_unknown_adapter_kinds_are_rejected() -> None:
     import yaml
 
     from agent_lab.experiments.config import ExperimentConfig
 
     raw = yaml.safe_load(Path("experiments/harness_check/experiment.yaml").read_text())
-    raw["adapter"]["kind"] = "anthropic"
+    raw["adapter"]["kind"] = "openai"
     with pytest.raises(ValueError):
         ExperimentConfig.model_validate(raw)

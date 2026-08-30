@@ -30,6 +30,121 @@ instrument, not about agent behaviour.
 
 ---
 
+## 2026-08-30 - Observation O-004 (apparatus, not a research result)
+
+**Classification:** Methodological / apparatus. Milestone 3, first live provider execution
+(3 tasks, `claude-opus-5`, harness check). **Not a research result**: three tasks against a
+scripted-simple environment say nothing about agent behaviour, and this was an instrument check.
+
+### Observation
+
+Two behaviours of the real provider differed from the offline doubles used to build the adapter:
+
+1. **A text preamble accompanies the tool call.** In two of three tasks the first assistant turn
+   returned `["text", "tool_use"]` - a short preamble ("I'll look that up for you.") in the same
+   turn as the tool call. The offline doubles had only ever produced `["tool_use"]` or
+   `["thinking", "tool_use"]`, so this shape was untested.
+2. **Adaptive thinking produced zero thinking tokens.** With `thinking: {type: adaptive}` and
+   `effort: high` declared, `output_tokens_details.thinking_tokens` was `0` on all six turns and
+   no thinking block was returned. The model judged these single-lookup tasks not to warrant it.
+
+The provider also returned a richer `usage` object than the doubles: `cache_creation`,
+`inference_geo`, `output_tokens_details`, `server_tool_use`, and `service_tier` alongside the
+token counts.
+
+### Conditions
+
+First live run of `smoke_anthropic_001`, immediately after a prior execution of the identical
+config (same config fingerprint) was rejected for insufficient account credit.
+
+### Unexpected detail
+
+The preamble case is the interesting one. It was handled correctly by accident of good design
+rather than by explicit intent: the runner ends a run only on a turn with **no** tool calls, so
+the preamble was preserved as model output, replayed verbatim, and never mistaken for the final
+answer. Had the runner instead treated "any text" as an answer, two of three tasks would have
+been scored against "I'll look that up for you." and the smoke test would have failed for a
+reason that had nothing to do with routing.
+
+The thinking result is a reminder that a *declared* control is not an *exercised* one. Thinking
+mode is recorded in the provider surface and its fingerprint, but the verbatim thinking-block
+replay path - the reason `provider_blocks` exists at all - was **not** exercised live, only
+offline. That gap should not be described as validated.
+
+### Resolution
+
+Added a regression test pinning the `["text", "tool_use"]` turn shape: the preamble is captured
+and replayed, and it never becomes the final answer. No production code changed - the behaviour
+was already correct; only the evidence for it was missing.
+
+The richer `usage` object needed no change: it is preserved verbatim in the trace, which is what
+"do not normalize away provider-specific information" is for.
+
+### Follow-up
+
+Before any experiment where thinking is a manipulated or relied-upon variable, verify thinking
+blocks are actually returned for those tasks - on trivial lookups they are not. If Phase 0 tasks
+stay this simple, the thinking control will be declared and recorded but effectively inert, and
+that must be stated rather than assumed.
+
+---
+
+## 2026-08-30 - Observation O-003 (apparatus, not a research result)
+
+**Classification:** Methodological / apparatus. Milestone 3. **No model was involved**; found
+while building the provider adapter offline. Not a research result.
+
+### Observation
+
+The canonical model surface and the provider-facing surface are **not** semantically equivalent,
+and the difference is not cosmetic. An Anthropic tool definition carries exactly `name`,
+`description`, and `input_schema`. Our canonical `ModelSurface` also carries `title`,
+`output_schema`, and `annotations` for every tool - and the output schemas are the largest part
+of the MCP surface, since they describe the full result envelope.
+
+So a model reached through the Anthropic Messages API sees a **materially narrower** capability
+surface than the same environment presents over MCP. Nothing warns you about this: the tools
+render successfully, the request is valid, and the loss is silent.
+
+### Conditions
+
+Found by comparing the canonical surface against the rendered Anthropic request body, offline,
+with no API call.
+
+### Unexpected detail
+
+Milestones 1 and 2 established the habit of asking "what does the model see?" at the MCP
+boundary. The answer changes again at the provider boundary, and in this case it changes by
+*subtraction* performed by the provider's schema rather than by anything the harness authored.
+O-001 was generated content leaking in; O-002 was a harness identifier leaking in; O-003 is
+declared content silently dropping out. All three are the same lesson from different directions:
+**the surface you can read in your own source is never the surface the model receives.**
+
+### Why it matters
+
+Two consequences for Phase 0. First, a fingerprint over the canonical model surface would not
+detect a change confined to the provider transformation, so the two must be fingerprinted
+separately - which `SPEC.md` v2.3 now requires. Second, if a later experiment manipulates output
+schemas, that manipulation would be **invisible** to a Claude subject reached this way, and any
+null result would be an artifact of the transport rather than a finding about the model.
+
+### Resolution
+
+Three surfaces are now persisted and fingerprinted independently - environment descriptor,
+canonical model surface, provider surface - plus the exact full provider request body for every
+turn as evidence. The `PROVIDER_SURFACE_PREPARED` trace event records the dropped fields
+explicitly (`title`, `output_schema`, `annotations`) so the loss is visible in the evidence
+rather than only in the code. A test asserts the model-surface and provider-surface fingerprints
+differ.
+
+### Follow-up
+
+Before any experiment that treats output schemas or tool annotations as a manipulated variable,
+confirm the variable actually survives to the model on the provider being used. For the Anthropic
+Messages API today, it does not.
+
+---
+
 ## 2026-08-30 - Observation O-002 (apparatus, not a research result)
 
 **Classification:** Methodological / apparatus. Milestone 2. **No model was involved and no

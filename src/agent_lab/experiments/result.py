@@ -20,7 +20,9 @@ from agent_lab.experiments.tasks import Task
 from agent_lab.tracing import events as ev
 from agent_lab.tracing.events import TraceEvent
 
-RESULT_SCHEMA_VERSION = "1.0.0"
+RESULT_SCHEMA_VERSION = "1.1.0"
+"""1.1.0 adds provider-boundary fields (Milestone 3). Rows written under different result
+schema versions must not be compared as equivalent."""
 
 
 class ToolCallRecord(BaseModel):
@@ -64,6 +66,21 @@ class ResultRow(BaseModel):
     environment_version: str
     environment_fingerprint: str
     model_surface_fingerprint: str
+    provider_surface_fingerprint: str
+
+    model_requested: str
+    model_served: str | None
+    """What the provider says actually served the request. Aliases are not immutable
+    snapshots, so this can differ from what was requested."""
+
+    model_snapshot_available: bool
+    """False for providers exposing only mutable aliases. Recorded rather than implied
+    (`SPEC.md` s18)."""
+
+    model_controls: str
+    provider_request_ids: tuple[str, ...]
+    provider_stop_reason: str | None
+    provider_error_kind: str | None
 
     task_id: str
     task_set: str
@@ -135,6 +152,10 @@ class _Extracted(BaseModel):
     tool_names: tuple[str, ...]
     environment_id: str
     environment_version: str
+    model_served: str | None
+    provider_request_ids: tuple[str, ...]
+    provider_stop_reason: str | None
+    provider_error_kind: str | None
 
 
 def _extract(events: Sequence[TraceEvent]) -> _Extracted:
@@ -174,6 +195,10 @@ def _extract(events: Sequence[TraceEvent]) -> _Extracted:
     tool_names: tuple[str, ...] = ()
     environment_id = ""
     environment_version = ""
+    model_served: str | None = None
+    request_ids: list[str] = []
+    provider_stop_reason: str | None = None
+    provider_error_kind: str | None = None
 
     for event in events:
         if event.event_type == ev.RUN_COMPLETED:
@@ -185,6 +210,18 @@ def _extract(events: Sequence[TraceEvent]) -> _Extracted:
             if value is not None:
                 latency_total += float(value)
                 saw_latency = True
+            request_id = event.payload.get("provider_request_id")
+            if request_id is not None:
+                request_ids.append(str(request_id))
+            raw_block = event.payload.get("raw")
+            if isinstance(raw_block, dict):
+                provider_raw = cast(dict[str, Any], raw_block)
+                served = provider_raw.get("served_model")
+                if served is not None:
+                    model_served = str(served)
+                stop = provider_raw.get("stop_reason")
+                if stop is not None:
+                    provider_stop_reason = str(stop)
             raw_usage = event.payload.get("usage")
             if isinstance(raw_usage, dict):
                 usage = cast(dict[str, Any], raw_usage)
@@ -194,6 +231,8 @@ def _extract(events: Sequence[TraceEvent]) -> _Extracted:
                 reported_output = usage.get("output_tokens")
                 if reported_output is not None:
                     output_tokens = (output_tokens or 0) + int(reported_output)
+        elif event.event_type == ev.PROVIDER_ERROR:
+            provider_error_kind = str(event.payload.get("error_kind"))
         elif event.event_type == ev.ENVIRONMENT_CONNECTED:
             descriptor = cast(dict[str, Any], event.payload["descriptor"])
             declared_tools = cast(list[dict[str, Any]], descriptor["tools"])
@@ -211,6 +250,10 @@ def _extract(events: Sequence[TraceEvent]) -> _Extracted:
         tool_names=tool_names,
         environment_id=environment_id,
         environment_version=environment_version,
+        model_served=model_served,
+        provider_request_ids=tuple(request_ids),
+        provider_stop_reason=provider_stop_reason,
+        provider_error_kind=provider_error_kind,
     )
 
 
@@ -275,6 +318,15 @@ def derive_result(
         environment_version=extracted.environment_version,
         environment_fingerprint=head.environment_fingerprint,
         model_surface_fingerprint=head.model_surface_fingerprint,
+        provider_surface_fingerprint=head.provider_surface_fingerprint,
+        model_requested=resolved.config.model.name,
+        model_served=extracted.model_served,
+        # Anthropic exposes mutable aliases, not immutable snapshots (`SPEC.md` s18).
+        model_snapshot_available=head.provider != "anthropic",
+        model_controls=canonical_json(resolved.config.model.parameters),
+        provider_request_ids=extracted.provider_request_ids,
+        provider_stop_reason=extracted.provider_stop_reason,
+        provider_error_kind=extracted.provider_error_kind,
         task_id=task.id,
         task_set=resolved.task_set.id,
         tool_space_id=head.tool_space_id,

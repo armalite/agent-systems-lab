@@ -205,42 +205,48 @@ If those answers are not clear from the repository, fixing the documentation is 
 
 *Keep this section accurate. It is the fastest answer to "what exists?" for a new agent.*
 
-**Current milestone:** Milestone 2 - core experiment harness. **Complete.**
+**Current milestone:** Milestone 3 - first real provider. **Complete**, including live smoke
+validation against `claude-opus-5` (3/3 routing, 3/3 task success, ~$0.037).
 
 **Implemented:**
 
-- *M0* - `uv`-managed Python 3.12 project; `--version` CLI; ruff, pyright (strict), pytest;
-  `paid` marker deselected by default and guarded by tests; `.env.example`; research notebook.
-- *M1* - `agent_lab.synthetic`: JSON fixtures, pure deterministic tools, two tool-spaces
-  (`customer_baseline_v1`, `customer_overlap_v1`), thin stdio `MCPServer` adapter selecting the
-  surface at launch. `agent_lab.mcp.client`: stdio client + canonical tool-surface projection.
-- *M2* - the harness. `environments/` (EnvironmentDescriptor, ModelSurface, `fp1:sha256`
-  fingerprints, MCP loader); `experiments/` (task loading with declared answer strategies,
-  experiment config, runner owning the agent loop, result derivation); `models/` (adapter
-  protocol, deterministic scripted fake); `evals/` (answer strategies, versioned metric
-  definition sets); `tracing/` (ordered JSONL events with layer tags); `storage/` (explicit
-  Arrow schema, DuckDB-queryable Parquet); `agent-lab validate` / `run`; the
-  `experiments/harness_check/` self-check dataset.
+- *M0* - `uv` project, `--version` CLI, ruff/pyright/pytest, `paid` marker, research notebook.
+- *M1* - `agent_lab.synthetic`: fixtures, pure deterministic tools, two tool-spaces, thin stdio
+  `MCPServer` adapter. `agent_lab.mcp.client`: stdio client + canonical tool-surface projection.
+- *M2* - the harness: environments, tasks, config, runner (owns the agent loop), scripted fake
+  adapter, versioned metric sets, ordered JSONL traces, result derivation, Parquet persistence,
+  `agent-lab validate` / `run`, `experiments/harness_check/`.
+- *M3* - `agent_lab.models.anthropic` (one model turn), `agent_lab.models.provider` (paid gate,
+  request budget, secret redaction), provider trace layer and events, `provider_surface`
+  fingerprint plus exact per-turn request bodies, `--allow-paid`, `clean harness-check`, and
+  `experiments/smoke_anthropic/` (3 tasks, classification `harness_check`).
 
 **Architectural invariants (each enforced by test):**
 
 - `synthetic/{models,data,tools,toolspaces}.py` never import `mcp`.
-- The runner owns the agent loop; an adapter produces exactly one model turn.
-- `derive_result` reads only trace events and ignores `EVALUATION_COMPLETED`, so re-derivation
-  from a persisted trace is non-circular and asserted equal to what was written.
-- The environment fingerprint and the model-surface fingerprint are distinct: `serverInfo` and
-  server instructions move the former and must not move the latter.
-- No provider SDK is declared or importable; the runner refuses any non-scripted adapter.
+- The runner owns the agent loop; an adapter produces exactly one model turn and never loops.
+- `derive_result` reads only trace events and ignores `EVALUATION_COMPLETED`.
+- **Four representations stay separate**: environment descriptor, canonical model surface, stable
+  provider surface, and the exact full provider request body for every turn. The first three are
+  fingerprinted; the exact request is evidence and gets its own per-turn hash.
+- Provider-native assistant blocks are replayed verbatim; the runner never interprets them.
+- Paid execution requires `--allow-paid` per invocation plus a declared request budget.
+  Credentials authorize nothing.
 
-**Not yet implemented:** real provider adapter and run-time paid opt-in (M3); Phase 0
-calibration dataset, pre-registration record, and comparison/plot (M4); DuckDB analysis
-ergonomics, regression extraction, `summarize`/`compare`/`inspect` (M5).
-**Nothing in this repository can call a model.**
+**Not yet implemented:** Phase 0 calibration dataset, pre-registration record, comparison and
+plot (M4); DuckDB analysis ergonomics and `summarize`/`compare`/`inspect` (M5).
+
+**Exercised live vs. offline only:** request construction, tool rendering, tool-result
+round-tripping, response mapping, usage, and the provider-error path are all validated against
+the real API. The **verbatim thinking-block replay path is exercised offline only** - adaptive
+thinking returned zero thinking tokens on the smoke tasks (Observation O-004). Do not describe it
+as live-validated.
 
 **Active research question:** none. Phase 0 is calibration only, and no novelty gate has been run.
 
-**Observations recorded:** O-001 and O-002, both apparatus findings, both model-visible surface
-leaks caught before any model experiment. Neither is a research result.
+**Observations recorded:** O-001, O-002, O-003 (model-visible leakage, all caught before any
+model experiment) and O-004 (real-provider behaviour vs. offline doubles). All are apparatus
+findings; none is a research result.
 
 **Standing decisions carried forward.** `SPEC.md` v2.1 absorbed most of these; the spec is the
 canonical statement and the section references below are the place to check the detail.
@@ -267,8 +273,14 @@ canonical statement and the section references below are the place to check the 
   that ends up in the message history** - including tool-call ids echoed back in the conversation
   (Observation O-002). Research-design vocabulary (`baseline`, `overlap`, `calibration`,
   `experiment`, condition identifiers, and the fact of being apparatus at all) must never appear
-  there. Audit the **recorded request**, not the code that builds it. Guarded by
-  `tests/test_mcp_server.py` and `tests/test_model_visible_audit.py`.
+  there. Audit the **recorded request**, not the code that builds it - at the MCP boundary and
+  again at the provider boundary, since an adapter re-serializes everything and may add material
+  of its own. Guarded by `tests/test_mcp_server.py`, `tests/test_model_visible_audit.py`, and
+  `tests/test_provider_execution_offline.py`.
+- **Provider controls are experimental controls.** Declare thinking mode, effort, max tokens and
+  model identity explicitly rather than inheriting provider defaults, and record them. Never send
+  `temperature` to current Claude models - it is unsupported and rejected. Variance is controlled
+  by repetitions (`SPEC.md` s18, v2.3).
 - **Evidence authority is raw trace > normalized result row > aggregate summary** (`SPEC.md`
   s18). If a derived row disagrees with a valid trace, the trace wins and the derivation is the
   bug. Derived fields must be reproducible from the trace alone.

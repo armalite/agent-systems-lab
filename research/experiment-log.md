@@ -94,6 +94,71 @@ records the commit, result paths, findings, limitations, and the next question.
 
 ---
 
+## 2026-08-30 - Milestone 3: first real provider (offline)
+
+- **Type:** Instrument build (not an experiment). **No provider API call has been made.**
+- **Commit:** uncommitted working tree at time of writing (branch `main`, parent `da30924`).
+- **Delivered:** `agent_lab.models.anthropic` (one model turn, no loop); `agent_lab.models.provider`
+  (paid gate, request budget, deterministic secret redaction); `provider` trace layer with
+  `PROVIDER_SURFACE_PREPARED` and `PROVIDER_ERROR`; stable `provider_surface_fingerprint` plus the
+  exact full provider request body persisted for every turn with its own hash; provider fields in
+  the result schema; `--allow-paid`; `clean harness-check`; `experiments/smoke_anthropic/`
+  (3 tasks, 1 condition, 1 repetition, classification `harness_check`).
+- **Schema versions:** trace 1.0.0 -> 1.1.0, result 1.0.0 -> 1.1.0. M2 and M3 rows must not be
+  compared as equivalent.
+- **Dependencies added:** `anthropic>=1.2.0`.
+- **Verification (all offline):** 237 tests pass; ruff and pyright (strict) clean. The full
+  harness ran end to end against a fake Anthropic client through the real runner, real MCP
+  environment, and real tracing - results re-derived from persisted traces and matched. Six
+  persisted provider requests were audited for leakage: zero hits across design vocabulary,
+  condition identifiers, run/execution ids, filesystem paths, server identity, and credential
+  shapes. Environment, model-surface, and provider-surface fingerprints are all distinct.
+- **Methodological finding:** Observation **O-003** - the Anthropic tool schema has no
+  output-schema field, so a model reached through the Messages API sees a materially narrower
+  capability surface than the same environment presents over MCP. Recorded explicitly in the
+  trace rather than left implicit.
+- **Controls:** `claude-opus-5`, `thinking: {type: adaptive}`, `effort: high`, `max_tokens: 4096`,
+  SDK retries 0. `temperature` is deliberately absent - unsupported on current Claude models and
+  rejected by the API. Variance is controlled by repetitions, not sampling parameters.
+- **Limitations:** model identity is a mutable alias, not an immutable snapshot; recorded as
+  `model_snapshot_available: false` alongside the served model the provider reports. No live
+  evidence exists yet.
+- **Next:** Milestone 4 planning, on researcher approval. Phase 0 still requires a
+  pre-registration record before execution.
+
+---
+
+## 2026-08-30 - Milestone 3: live provider smoke validation
+
+- **Type:** Harness check against a real provider. **Not calibration and not Phase 0.**
+- **Experiment:** `smoke_anthropic_001`, unmodified - config fingerprint
+  `fp1:sha256:a7e06081...`, identical to the approved offline definition.
+- **Attempt 1** (`20260830T060816Z`): all 3 runs rejected with HTTP 400
+  `invalid_request_error` - insufficient account credit. No inference, **$0.00 billed**. Every
+  run recorded a distinct `PROVIDER_ERROR`, aborted with `stop_reason: provider_error`, did not
+  retry, and still produced a complete trace and a re-derivable result row. First real test of
+  the zero-retry provider-error path; it held. Evidence retained.
+- **Attempt 2** (`20260830T061819Z`), after credits were added: **3/3 first-call routing correct,
+  3/3 task success.** 6 provider requests (budget 10), 5,607 input and 347 output tokens, 0 cache
+  tokens. **Actual cost ~$0.037.**
+- **Model:** requested `claude-opus-5`; `response.model` returned `claude-opus-5`. An alias, not
+  an immutable snapshot - recorded as `model_snapshot_available: false`.
+- **Controls:** `thinking: {type: adaptive}`, `effort: high`, `max_tokens: 4096`, SDK retries 0,
+  no `temperature`.
+- **Verification:** 6 live provider requests audited for leakage - zero hits across design
+  vocabulary, condition identifiers, run/execution ids, paths, server identity, and credential
+  shapes. The live OAuth access token was byte-searched across every artifact and is absent. All
+  3 result rows re-derived from the raw traces match the persisted Parquet exactly. Environment,
+  model-surface, and provider-surface fingerprints all distinct and identical to their offline
+  values.
+- **Findings:** Observation **O-004** - a text preamble accompanies the tool call in most turns
+  (handled correctly; regression test added), and adaptive thinking produced zero thinking tokens
+  on these trivial lookups, so the verbatim thinking-replay path remains exercised only offline.
+- **Limitations:** three tasks, one condition, one repetition, one model. Says nothing about
+  agent behaviour and is not evidence for any research claim.
+
+---
+
 ## Phase 0 pre-registration (required before Milestone 4 runs)
 
 Before any Phase 0 calibration run is executed, and **before its results are observed**, record

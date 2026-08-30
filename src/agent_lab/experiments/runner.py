@@ -16,7 +16,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from mcp import Client
 
@@ -27,8 +27,14 @@ from agent_lab.evals.metrics import METRIC_DEFINITION_SETS
 from agent_lab.experiments.config import ResolvedExperiment
 from agent_lab.experiments.result import RESULT_SCHEMA_VERSION, ResultRow, derive_result
 from agent_lab.experiments.tasks import Task
-from agent_lab.models.base import Message, ModelAdapter, ModelRequest
+from agent_lab.models.anthropic import AnthropicAdapter, exact_request_hash, redacted_request
+from agent_lab.models.base import Message, ModelAdapter, ModelRequest, ProviderSurface
 from agent_lab.models.fake import ScriptedAdapter, load_script_set
+from agent_lab.models.provider import (
+    PaidExecutionGate,
+    ProviderCallError,
+    RequestBudgetExceededError,
+)
 from agent_lab.storage.parquet import write_results
 from agent_lab.tracing import events as ev
 from agent_lab.tracing.recorder import TraceRecorder
@@ -36,6 +42,26 @@ from agent_lab.tracing.recorder import TraceRecorder
 STOP_ANSWERED = "answered"
 STOP_MAX_STEPS = "max_steps"
 STOP_NO_ANSWER = "no_answer"
+STOP_PROVIDER_ERROR = "provider_error"
+
+
+def build_adapter(resolved: ResolvedExperiment, gate: PaidExecutionGate) -> ModelAdapter:
+    """Construct the configured adapter. Paid adapters are gated before any client is built."""
+    config = resolved.config
+    if config.adapter.kind == "scripted":
+        assert config.adapter.script_set is not None
+        return ScriptedAdapter(
+            load_script_set(resolved.directory / config.adapter.script_set),
+            model_name=config.model.name,
+        )
+    if config.adapter.kind == "anthropic":
+        gate.authorize()
+        return AnthropicAdapter(
+            model=config.model.name,
+            parameters=dict(config.model.parameters),
+            gate=gate,
+        )
+    raise ValueError(f"unknown adapter kind {config.adapter.kind!r}")
 
 
 @dataclass(frozen=True)
@@ -156,20 +182,37 @@ async def _run_single(
             parameters=parameters,
             metadata={"task_id": task.id, "tool_space_id": tool_space_id, "step": step},
         )
-        recorder.emit(
-            ev.MODEL_REQUEST,
-            "model",
-            {
-                "step": step,
-                "system_instructions": request.system_instructions,
-                "messages": [m.model_dump(mode="json") for m in request.messages],
-                "rendered_tools": list(request.rendered_tools),
-                "parameters": request.parameters,
-            },
-        )
+        payload: dict[str, Any] = {
+            "step": step,
+            "system_instructions": request.system_instructions,
+            "messages": [m.model_dump(mode="json") for m in request.messages],
+            "rendered_tools": list(request.rendered_tools),
+            "parameters": request.parameters,
+        }
+        build = getattr(adapter, "build_request", None)
+        if build is not None:
+            # The exact full request body is evidence (SPEC.md s9.2, v2.3): persist it verbatim
+            # for every turn, after deterministic secret redaction.
+            body = redacted_request(build(request))
+            payload["provider_request"] = body
+            payload["provider_request_hash"] = exact_request_hash(body)
+        recorder.emit(ev.MODEL_REQUEST, "model", payload)
 
         started = time.perf_counter()
-        response = await adapter.generate(request)
+        try:
+            response = await adapter.generate(request)
+        except ProviderCallError as exc:
+            recorder.emit(
+                ev.PROVIDER_ERROR,
+                "provider",
+                {"step": step, "error_kind": exc.kind, "detail": exc.detail},
+            )
+            recorder.emit(
+                ev.RUN_COMPLETED,
+                "harness",
+                {"stop_reason": STOP_PROVIDER_ERROR, "final_text": None},
+            )
+            return
         latency_ms = (time.perf_counter() - started) * 1000
 
         recorder.emit(
@@ -183,6 +226,7 @@ async def _run_single(
                 "latency_ms": latency_ms,
                 "provider_request_id": response.provider_request_id,
                 "raw": response.raw,
+                "provider_blocks": list(response.provider_blocks or ()),
             },
         )
         messages.append(
@@ -192,6 +236,8 @@ async def _run_single(
                     "text": response.text,
                     "tool_calls": [c.model_dump(mode="json") for c in response.tool_calls],
                 },
+                # Opaque to the runner; replayed verbatim by the adapter that produced it.
+                provider_blocks=response.provider_blocks,
             )
         )
 
@@ -243,7 +289,12 @@ async def _run_single(
             messages.append(
                 Message(
                     role="tool",
-                    content={"call_id": call.call_id, "name": call.name, "result": observation},
+                    content={
+                        "call_id": call.call_id,
+                        "name": call.name,
+                        "result": observation,
+                        "is_error": error_kind is not None,
+                    },
                 )
             )
     else:
@@ -255,19 +306,23 @@ async def _run_single(
 
 
 async def run_experiment(
-    resolved: ResolvedExperiment, *, results_root: Path = Path("results")
+    resolved: ResolvedExperiment,
+    *,
+    results_root: Path = Path("results"),
+    allow_paid: bool = False,
 ) -> tuple[ExecutionPaths, tuple[ResultRow, ...]]:
-    """Execute every condition x task x repetition cell and persist all evidence."""
+    """Execute every condition x task x repetition cell and persist all evidence.
+
+    `allow_paid` is the run-time authorization required before any cost-incurring provider call
+    (`SPEC.md` s19). Configured credentials authorize nothing on their own.
+    """
     config = resolved.config
-    if config.adapter.kind != "scripted":
-        raise ValueError(
-            f"adapter kind {config.adapter.kind!r} is not available: Milestone 2 has no provider "
-            "integration and no paid execution path."
-        )
-    adapter: ModelAdapter = ScriptedAdapter(
-        load_script_set(resolved.directory / config.adapter.script_set),
-        model_name=config.model.name,
+    gate = PaidExecutionGate(
+        provider=config.model.provider,
+        authorized=allow_paid,
+        max_requests=(config.cost_controls.max_provider_requests if config.cost_controls else None),
     )
+    adapter: ModelAdapter = build_adapter(resolved, gate)
     metric_set = METRIC_DEFINITION_SETS[config.metric_definition_set]
 
     started_at = datetime.now(UTC)
@@ -279,92 +334,136 @@ async def run_experiment(
     rows: list[ResultRow] = []
     tasks: Sequence[Task] = resolved.selected_tasks()
 
-    for tool_space_id in config.conditions:
-        async with connect_environment(tool_space_id) as env:
-            descriptor = env.descriptor
-            surface = descriptor.model_surface(config.controls.system_instructions)
-            environment_fingerprint = descriptor.fingerprint()
-            model_surface_fingerprint = surface.fingerprint()
-            (paths.environments / f"{tool_space_id}.json").write_text(
-                json.dumps(
-                    {
-                        "descriptor": descriptor.model_dump(mode="json"),
-                        "environment_fingerprint": environment_fingerprint,
-                        "model_surface": surface.model_dump(mode="json"),
-                        "model_surface_fingerprint": model_surface_fingerprint,
-                    },
-                    indent=2,
-                    ensure_ascii=False,
-                )
-                + "\n",
-                encoding="utf-8",
-            )
+    aborted_reason: str | None = None
+    try:
+        for tool_space_id in config.conditions:
+            async with connect_environment(tool_space_id) as env:
+                descriptor = env.descriptor
+                surface = descriptor.model_surface(config.controls.system_instructions)
+                environment_fingerprint = descriptor.fingerprint()
+                model_surface_fingerprint = surface.fingerprint()
 
-            for task in tasks:
-                for repetition in range(config.repetitions):
-                    run_id = build_run_id(config.id, tool_space_id, task.id, repetition)
-                    context = {
-                        "run_id": run_id,
-                        "execution_id": execution_id,
-                        "experiment_id": config.id,
-                        "task_id": task.id,
-                        "repetition": repetition,
-                        "tool_space_id": tool_space_id,
-                        "environment_fingerprint": environment_fingerprint,
-                        "model_surface_fingerprint": model_surface_fingerprint,
-                        "provider": adapter.provider,
-                        "model": adapter.model,
-                    }
-                    trace_path = paths.traces / f"{run_id.replace('/', '__')}.jsonl"
-                    with TraceRecorder(trace_path, context) as recorder:
-                        recorder.emit(
-                            ev.RUN_STARTED,
-                            "harness",
-                            {
-                                "task": task.model_dump(mode="json"),
-                                "config_fingerprint": resolved.config_fingerprint,
-                                "task_set_fingerprint": resolved.task_set_fingerprint,
-                                "script_set_fingerprint": resolved.script_set_fingerprint,
-                                "controls": config.controls.model_dump(mode="json"),
-                                "harness_version": __version__,
-                            },
-                        )
-                        recorder.emit(
-                            ev.ENVIRONMENT_CONNECTED,
-                            "mcp",
-                            {
-                                "descriptor": descriptor.model_dump(mode="json"),
-                                "environment_fingerprint": environment_fingerprint,
-                                "model_surface_fingerprint": model_surface_fingerprint,
-                            },
-                        )
-                        await _run_single(
-                            adapter=adapter,
-                            client=env.client,
-                            task=task,
-                            surface=surface,
-                            recorder=recorder,
-                            max_steps=config.controls.max_steps,
-                            parameters=config.model.parameters,
-                            tool_space_id=tool_space_id,
-                        )
-                        # Derived strictly from the events emitted above.
-                        row = derive_result(
-                            events=recorder.events,
-                            task=task,
-                            resolved=resolved,
-                            metric_set=metric_set,
-                            trace_path=trace_path,
-                        )
-                        recorder.emit(
-                            ev.EVALUATION_COMPLETED,
-                            "evaluator",
-                            {
-                                **metric_set.provenance(),
-                                "metrics": row.metric_payload(),
-                            },
-                        )
-                    rows.append(row)
+                # Third representation: what the provider is actually told, after the adapter
+                # re-serializes the canonical surface into its own format. Not assumed equal to the
+                # model surface - the Anthropic tool schema has no output-schema field.
+                provider_surface: ProviderSurface | None = None
+                provider_surface_fingerprint = ""
+                describe = getattr(adapter, "provider_surface", None)
+                if describe is not None:
+                    described = cast(ProviderSurface, describe(surface))
+                    provider_surface = described
+                    provider_surface_fingerprint = described.fingerprint()
+
+                (paths.environments / f"{tool_space_id}.json").write_text(
+                    json.dumps(
+                        {
+                            "descriptor": descriptor.model_dump(mode="json"),
+                            "environment_fingerprint": environment_fingerprint,
+                            "model_surface": surface.model_dump(mode="json"),
+                            "model_surface_fingerprint": model_surface_fingerprint,
+                            "provider_surface": (
+                                provider_surface.model_dump(mode="json")
+                                if provider_surface
+                                else None
+                            ),
+                            "provider_surface_fingerprint": provider_surface_fingerprint,
+                        },
+                        indent=2,
+                        ensure_ascii=False,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+
+                for task in tasks:
+                    for repetition in range(config.repetitions):
+                        run_id = build_run_id(config.id, tool_space_id, task.id, repetition)
+                        context = {
+                            "run_id": run_id,
+                            "execution_id": execution_id,
+                            "experiment_id": config.id,
+                            "task_id": task.id,
+                            "repetition": repetition,
+                            "tool_space_id": tool_space_id,
+                            "environment_fingerprint": environment_fingerprint,
+                            "model_surface_fingerprint": model_surface_fingerprint,
+                            "provider_surface_fingerprint": provider_surface_fingerprint,
+                            "provider": adapter.provider,
+                            "model": adapter.model,
+                        }
+                        trace_path = paths.traces / f"{run_id.replace('/', '__')}.jsonl"
+                        with TraceRecorder(trace_path, context) as recorder:
+                            recorder.emit(
+                                ev.RUN_STARTED,
+                                "harness",
+                                {
+                                    "task": task.model_dump(mode="json"),
+                                    "config_fingerprint": resolved.config_fingerprint,
+                                    "task_set_fingerprint": resolved.task_set_fingerprint,
+                                    "script_set_fingerprint": resolved.script_set_fingerprint,
+                                    "controls": config.controls.model_dump(mode="json"),
+                                    "harness_version": __version__,
+                                },
+                            )
+                            recorder.emit(
+                                ev.ENVIRONMENT_CONNECTED,
+                                "mcp",
+                                {
+                                    "descriptor": descriptor.model_dump(mode="json"),
+                                    "environment_fingerprint": environment_fingerprint,
+                                    "model_surface_fingerprint": model_surface_fingerprint,
+                                },
+                            )
+                            if provider_surface is not None:
+                                recorder.emit(
+                                    ev.PROVIDER_SURFACE_PREPARED,
+                                    "provider",
+                                    {
+                                        "provider_surface": provider_surface.model_dump(
+                                            mode="json"
+                                        ),
+                                        "provider_surface_fingerprint": (
+                                            provider_surface_fingerprint
+                                        ),
+                                        "dropped_from_model_surface": [
+                                            "title",
+                                            "output_schema",
+                                            "annotations",
+                                        ],
+                                    },
+                                )
+                            await _run_single(
+                                adapter=adapter,
+                                client=env.client,
+                                task=task,
+                                surface=surface,
+                                recorder=recorder,
+                                max_steps=config.controls.max_steps,
+                                parameters=config.model.parameters,
+                                tool_space_id=tool_space_id,
+                            )
+                            # Derived strictly from the events emitted above.
+                            row = derive_result(
+                                events=recorder.events,
+                                task=task,
+                                resolved=resolved,
+                                metric_set=metric_set,
+                                trace_path=trace_path,
+                            )
+                            recorder.emit(
+                                ev.EVALUATION_COMPLETED,
+                                "evaluator",
+                                {
+                                    **metric_set.provenance(),
+                                    "metrics": row.metric_payload(),
+                                },
+                            )
+                        rows.append(row)
+
+    except RequestBudgetExceededError as exc:
+        # Persist everything gathered so far, then surface the abort. Evidence already paid for
+        # is never discarded (SPEC.md s18).
+        aborted_reason = str(exc)
 
     paths.resolved_config.write_text(
         json.dumps(
@@ -400,6 +499,15 @@ async def run_experiment(
                 **_git_provenance(),
                 "run_count": len(rows),
                 "conditions": list(config.conditions),
+                "adapter_kind": config.adapter.kind,
+                "model_requested": config.model.name,
+                "model_controls": config.model.parameters,
+                "model_snapshot_available": False if gate.is_paid else None,
+                "provider_requests_used": gate.requests_used,
+                "provider_request_budget": gate.max_requests,
+                "paid_execution_authorized": allow_paid and gate.is_paid,
+                "aborted": aborted_reason is not None,
+                "aborted_reason": aborted_reason,
             },
             indent=2,
             ensure_ascii=False,
@@ -407,4 +515,6 @@ async def run_experiment(
         + "\n",
         encoding="utf-8",
     )
+    if aborted_reason is not None:
+        raise RequestBudgetExceededError(aborted_reason)
     return paths, tuple(rows)

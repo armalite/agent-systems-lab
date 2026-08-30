@@ -1,14 +1,14 @@
 # Agent Systems Lab - Research & Build Specification
 
 **Status:** Active research specification  
-**Version:** 2.2  
+**Version:** 2.3  
 **Repository:** `agent-systems-lab`
 
-### Version 2.2 methodological clarifications
+### Version 2.3 methodological clarifications
 
-Version 2.2 preserves the v2.0/v2.1 research direction and milestone structure. It incorporates several load-bearing M2 decisions before the experiment harness is implemented.
+Version 2.3 preserves the existing research direction and milestone structure. It adds provider-boundary requirements discovered while planning Milestone 3.
 
-Version 2.1 established:
+Earlier versions established:
 
 - every string or schema field that reaches a model is experimental material;
 - the complete ordered tool-call sequence is primary evidence and must not be collapsed into a single selected-tool field;
@@ -16,7 +16,7 @@ Version 2.1 established:
 - environment/tool-surface fingerprints should represent canonical model-relevant capability definitions rather than incidental wire serialization;
 - provider execution that can incur cost requires explicit run-time opt-in even when credentials are configured.
 
-Version 2.2 additionally clarifies:
+Version 2.2 additionally clarified:
 
 - distinguish the canonical MCP/environment descriptor from the exact surface actually presented to a model;
 - preserve and fingerprint model-visible surface separately when it differs from the underlying environment;
@@ -27,6 +27,15 @@ Version 2.2 additionally clarifies:
 - deterministic answer evaluation must use a declared task-level matching rule rather than an ad hoc generic substring heuristic;
 - distinguish stable logical `run_id` from physical `execution_id`;
 - raw trace is authoritative over derived rows and summaries.
+
+Version 2.3 additionally clarifies:
+
+- distinguish a stable provider-facing capability/config surface fingerprint from the exact full provider request sent on each turn;
+- preserve the exact full provider request body for every turn, with secrets excluded/redacted;
+- preserve provider-native assistant continuation blocks when the provider requires exact round-tripping across tool-use turns;
+- provider-specific model controls such as thinking/effort must be explicit experimental controls when available;
+- do not use `temperature: 0` as a generic determinism control for models that do not support it;
+- real-provider smoke validation is a harness check, not Phase 0 research.
 
 
 ---
@@ -639,7 +648,10 @@ Response support should include:
 - usage information where available;
 - latency;
 - provider request identifiers;
-- raw provider metadata or a serializable representation.
+- raw provider metadata or a serializable representation;
+- opaque provider-native assistant content/continuation blocks when the provider requires them to be echoed back unchanged on later tool-use turns.
+
+The runner must remain provider-neutral and must not interpret opaque provider-native continuation blocks. The owning adapter may preserve and replay them as required by the provider protocol.
 
 Do not normalize away information that may later prove experimentally relevant.
 
@@ -675,7 +687,16 @@ At minimum, when exposed to the model, the model-surface representation should i
 
 Canonicalization should use deterministic ordering and stable serialization. Do not hash raw MCP wire bytes merely because they are available.
 
-The raw trace must preserve the actual adapter request. In Milestone 3, when a real provider adapter may re-serialize or transform tools again, preserve the exact provider-facing representation as separate evidence and, if useful for comparison, fingerprint that representation as well.
+The raw trace must preserve the actual adapter request.
+
+In Milestone 3, when a real provider adapter may re-serialize or transform tools again, preserve two separate provider-boundary objects:
+
+1. a deterministic **provider-surface representation/fingerprint** for the stable provider-facing capability/config material used for controlled comparison (for example model id, system instructions, rendered tools, tool choice, thinking/effort and other declared generation controls); and
+2. the **exact full provider request body for every turn**, including the conversation/messages actually sent.
+
+Do not call the stable surface fingerprint a fingerprint of the exact request if per-turn messages are excluded. If an exact-request hash is useful, compute it separately over the persisted full request after deterministic secret redaction.
+
+The full provider request is evidence; the provider-surface fingerprint is a comparison aid.
 
 Do not overdesign environment versioning before Milestone 2. Establish only enough structure that later experiments can distinguish V1 from V2 without ambiguity.
 
@@ -769,8 +790,9 @@ conditions:
 repetitions: 3
 
 controls:
-  temperature: 0
   randomize_tool_order: false
+  # Provider-specific generation controls belong in the resolved model config.
+  # Do not assume temperature is supported by every model.
 
 metrics:
   - task_success
@@ -885,7 +907,9 @@ Where possible, traces should distinguish:
 - deterministic underlying tool execution;
 - evaluator decisions.
 
-The raw provider-facing request should preserve the exact tool representation and other model-visible context actually sent to the provider, subject to credential/sensitive-data redaction.
+The raw provider-facing request should preserve the exact tool representation, system content, messages/conversation, model controls, and other model-visible context actually sent to the provider, subject to credential/sensitive-data redaction.
+
+Provider-native continuation content that must be replayed verbatim (for example thinking/redacted-thinking blocks on providers that require this) should be preserved losslessly in the trace and round-tripped by the provider adapter without interpretation by the runner.
 
 For future memory research, the trace design should also be capable of recording:
 
@@ -1205,6 +1229,8 @@ Persist:
 
 If a provider cannot provide deterministic seeds or immutable model snapshots, document the limitation.
 
+Record the exact provider-supported generation controls used for every run. Do not assume a universal `temperature` control exists. For models where temperature is unsupported or deprecated, omit it and rely on repeated runs plus explicit recording of the controls the provider actually supports (for example thinking mode and effort).
+
 Do not imply stronger reproducibility than the external API permits.
 
 Evidence authority is:
@@ -1440,11 +1466,27 @@ Implement one real provider adapter.
 
 If Claude is the initial experimental subject, Anthropic is a reasonable first choice.
 
+The real-provider smoke experiment is classified as a **harness check**, not calibration/frontier research.
+
 Acceptance:
 
 A 1-3 task smoke experiment can run against the configured provider and persist complete evidence.
 
-Provider execution that can incur cost must require explicit run-time opt-in. Merely configuring API credentials is insufficient authorization to make paid calls. The trace must preserve the actual provider-facing model/tool representation, with credentials and secrets redacted.
+Provider execution that can incur cost must require explicit run-time opt-in. Merely configuring API credentials is insufficient authorization to make paid calls.
+
+The implementation must preserve separately:
+
+- canonical MCP/environment descriptor;
+- canonical model-visible surface;
+- stable provider-facing capability/config surface and fingerprint;
+- exact full provider request body for every turn;
+- raw/provider-native response material required to reconstruct or continue the interaction.
+
+The adapter must preserve any provider-native assistant blocks that the provider requires to be replayed unchanged on subsequent tool-use turns.
+
+Provider-specific model controls used by the smoke run must be explicit and recorded. Do not send unsupported generic controls merely because they appeared in an earlier example configuration.
+
+Credentials and secrets must never enter traces/results.
 
 ### Milestone 4 - Phase 0 calibration
 

@@ -12,9 +12,11 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-TRACE_SCHEMA_VERSION = "1.0.0"
+TRACE_SCHEMA_VERSION = "1.1.0"
+"""1.1.0 adds the `provider` layer and the provider-boundary events (Milestone 3). Traces
+written under 1.0.0 remain readable; the new context field defaults to empty."""
 
-Layer = Literal["harness", "model", "mcp", "tool", "evaluator"]
+Layer = Literal["harness", "model", "mcp", "tool", "provider", "evaluator"]
 
 RUN_STARTED = "RUN_STARTED"
 ENVIRONMENT_CONNECTED = "ENVIRONMENT_CONNECTED"
@@ -24,6 +26,8 @@ TOOL_CALL_REQUESTED = "TOOL_CALL_REQUESTED"
 TOOL_CALL_EXECUTED = "TOOL_CALL_EXECUTED"
 TOOL_CALL_FAILED = "TOOL_CALL_FAILED"
 TOOL_RESULT_RETURNED = "TOOL_RESULT_RETURNED"
+PROVIDER_SURFACE_PREPARED = "PROVIDER_SURFACE_PREPARED"
+PROVIDER_ERROR = "PROVIDER_ERROR"
 RUN_COMPLETED = "RUN_COMPLETED"
 EVALUATION_COMPLETED = "EVALUATION_COMPLETED"
 
@@ -50,6 +54,9 @@ class TraceEvent(BaseModel):
     tool_space_id: str
     environment_fingerprint: str
     model_surface_fingerprint: str
+    provider_surface_fingerprint: str = ""
+    """Empty for adapters with no distinct provider-facing surface, and for 1.0.0 traces."""
+
     provider: str
     model: str
 

@@ -8,18 +8,33 @@ import pytest
 
 from agent_lab.synthetic.data import FIXTURE_FILES, load_dataset, to_core_customer
 
+# Expanded for Phase 0: the customer stratum carries the primary paired comparison and needs one
+# task per distinct record, so customers were grown to 20 before the task set was frozen
+# (`SPEC.md` s16, v2.5 - fixture material may be expanded while the design is still open).
+EXPECTED_FIXTURE_COUNTS = {
+    "customers.json": 20,
+    "orders.json": 12,
+    "invoices.json": 12,
+    "products.json": 12,
+    "employees.json": 12,
+}
+
 
 def test_all_fixture_files_are_present_and_populated() -> None:
+    assert set(EXPECTED_FIXTURE_COUNTS) == set(FIXTURE_FILES)
     for filename in FIXTURE_FILES:
         raw = files("agent_lab.synthetic.fixtures").joinpath(filename).read_text(encoding="utf-8")
         records: object = json.loads(raw)
         assert isinstance(records, list)
-        assert len(cast(list[object], records)) == 12, f"{filename} should hold 12 records"
+        expected = EXPECTED_FIXTURE_COUNTS[filename]
+        assert len(cast(list[object], records)) == expected, (
+            f"{filename} should hold {expected} records"
+        )
 
 
 def test_dataset_loads_and_passes_integrity_checks() -> None:
     dataset = load_dataset()
-    assert len(dataset.customers) == 12
+    assert len(dataset.customers) == 20
     assert len(dataset.orders) == 12
     assert len(dataset.invoices) == 12
     assert len(dataset.products) == 12
@@ -61,7 +76,7 @@ def test_invoice_customer_agrees_with_its_order() -> None:
         assert invoice.customer_id == order_customer[invoice.order_id]
 
 
-@pytest.mark.parametrize("customer_id", ["C101", "C102", "C107", "C112"])
+@pytest.mark.parametrize("customer_id", ["C101", "C102", "C107", "C112", "C115", "C120"])
 def test_fixture_values_are_not_derivable_from_identifiers(customer_id: str) -> None:
     """An answer inferable from the key alone would measure guessing, not tool use."""
     record = load_dataset().customer_by_id(customer_id)

@@ -130,7 +130,8 @@ uv run agent-lab run experiments/smoke_anthropic/experiment.yaml --allow-paid
 
 Without `--allow-paid` the command prints the model, controls, planned runs, and request budget,
 then refuses. A hard `cost_controls.max_provider_requests` ceiling is enforced before every
-provider request.
+provider request - it bounds the number of provider calls, **not** spend, since token volume per
+request varies and `max_tokens` permits much larger responses than a typical one.
 
 Delete disposable harness-check output (and nothing else):
 

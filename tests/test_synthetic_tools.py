@@ -11,6 +11,7 @@ from importlib.resources import files
 import pytest
 
 from agent_lab.synthetic import tools
+from agent_lab.synthetic.data import load_dataset
 from agent_lab.synthetic.toolspaces import TOOL_DEFINITIONS
 from tests.calls import MISSING_CALLS, VALID_CALLS
 
@@ -107,8 +108,9 @@ def test_name_and_email_lookups_are_case_insensitive(field_lookup: str, value: s
 
 
 def test_search_is_ordered_by_id_and_unranked() -> None:
+    dataset = load_dataset()
     result = tools.search_customers("example.test")
-    assert result.match_count == 12
+    assert result.match_count == len(dataset.customers)
     ids = [c.customer_id for c in result.customers]
     assert ids == sorted(ids)
 

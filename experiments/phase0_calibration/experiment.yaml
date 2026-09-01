@@ -1,0 +1,61 @@
+id: phase0_calibration_001
+classification: calibration
+
+research_question: >-
+  Can this lab reliably detect a change in first-call tool routing when five semantically
+  overlapping customer tools are added to an otherwise stable five-tool capability surface?
+
+# FROZEN Phase 0 calibration. Bound by research/preregistration/PHASE0.md.
+#
+# This is a positive control on the instrument, NOT a novel research contribution and NOT the
+# intended frontier question. Per SPEC.md s16 it succeeds if the experiment is controlled, the
+# interactions are inspectable, the evaluator discriminates correctly, the comparison is
+# reproducible, and any outcome can be explained from preserved evidence. A null result is an
+# acceptable calibration outcome.
+#
+# Execution stops after this experiment. Do not sweep tool count, naming, descriptions, schemas,
+# ordering, or models; invoke the novelty gate first.
+
+model:
+  provider: anthropic
+  name: claude-opus-5
+  parameters:
+    max_tokens: 4096
+    # Declared explicitly rather than inherited from provider defaults, and recorded as
+    # experimental controls. `temperature` is deliberately absent: unsupported on current Claude
+    # models and rejected by the API (SPEC.md s18).
+    thinking:
+      type: adaptive
+    output_config:
+      effort: high
+
+adapter:
+  kind: anthropic
+
+task_set: tasks.yaml
+
+# The manipulated variable. Same 28 frozen tasks under both.
+conditions:
+  - customer_baseline_v1
+  - customer_overlap_v1
+
+repetitions: 5
+
+controls:
+  system_instructions: >-
+    You are a customer support assistant. Use the available tools to look up records, then
+    answer the question directly and concisely.
+  max_steps: 4
+  retries: 0
+  randomize_tool_order: false
+
+metric_definition_set: phase0_single_tool_v1
+
+cost_controls:
+  # 28 tasks x 2 conditions x 5 repetitions x max_steps 4 = 1120. The ceiling must not truncate
+  # any trajectory valid under the experiment's own step limit (SPEC.md s14.1, v2.5). Expected
+  # usage is ~600. This bounds REQUEST COUNT, not spend.
+  max_provider_requests: 1120
+
+limits:
+  max_tasks: null

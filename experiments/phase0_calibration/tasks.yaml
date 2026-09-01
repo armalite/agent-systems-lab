@@ -1,0 +1,271 @@
+id: phase0_calibration_tasks_v1
+version: "1.0.0"
+
+# FROZEN Phase 0 calibration task set. Bound by research/preregistration/PHASE0.md.
+# Once the pre-registration is committed, this file is immutable for that execution; a change
+# constitutes a new explicitly versioned design (SPEC.md s16, v2.5).
+#
+# 28 tasks, two pre-declared strata, 28 distinct fixture records, zero record reuse:
+#
+#   exposure: direct     20 customer-ID lookups - the headline stratum. The overlap condition
+#                        adds five competing customer tools, so these are directly targeted.
+#   exposure: non_target  8 order/invoice/product/employee lookups. Their expected tool gains no
+#                        new direct competitor; only the tool list grows. Reported separately as
+#                        a coarse spillover indicator - NOT a true negative control, and never
+#                        pooled into the headline.
+#
+# Every customer task keys on customer_id by construction: a task keyed on name or email would
+# make an overlap-only tool correct and would be unanswerable in baseline, breaking the pairing.
+# `exact_match` is deliberately unused - M3 showed a conversational model answers in prose.
+
+tasks:
+  - id: p0_c01_c101_email
+    prompt: "What is the email address of customer C101?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C101}
+      answer: {email: "m.delgado@example.test"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: email, register: direct}
+
+  - id: p0_c02_c102_city
+    prompt: "Look up customer C102 and tell me which city they are based in."
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C102}
+      answer: {city: "Auckland"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: city, register: imperative}
+
+  - id: p0_c03_c103_status
+    prompt: "I need the current account status for customer C103."
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C103}
+      answer: {status: "churned"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: status, register: stated_need}
+
+  - id: p0_c04_c104_name
+    prompt: "Customer C104 - what name is on the account?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C104}
+      answer: {name: "Naomi Okafor"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: name, register: trailing_id}
+
+  - id: p0_c05_c105_email
+    prompt: "Look up customer C105 and tell me their email address."
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C105}
+      answer: {email: "i.solberg@example.test"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: email, register: imperative}
+
+  - id: p0_c06_c106_city
+    prompt: "I need to know which city customer C106 is based in."
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C106}
+      answer: {city: "Cairo"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: city, register: stated_need}
+
+  - id: p0_c07_c107_status
+    prompt: "Customer C107 - what is their account status?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C107}
+      answer: {status: "active"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: status, register: trailing_id}
+
+  - id: p0_c08_c108_name
+    prompt: "What is the name of customer C108?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C108}
+      answer: {name: "Rosa Menendez"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: name, register: direct}
+
+  - id: p0_c09_c109_email
+    prompt: "I need the email address on file for customer C109."
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C109}
+      answer: {email: "d.volkov@example.test"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: email, register: stated_need}
+
+  - id: p0_c10_c110_city
+    prompt: "Customer C110 - which city are they based in?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C110}
+      answer: {city: "Accra"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: city, register: trailing_id}
+
+  - id: p0_c11_c111_status
+    prompt: "What is the account status of customer C111?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C111}
+      answer: {status: "suspended"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: status, register: direct}
+
+  - id: p0_c12_c112_name
+    prompt: "Look up customer C112 and tell me the name on the account."
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C112}
+      answer: {name: "Leilani Kahale"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: name, register: imperative}
+
+  - id: p0_c13_c113_email
+    prompt: "Customer C113 - what email address do we have on file?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C113}
+      answer: {email: "o.brennan@example.test"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: email, register: trailing_id}
+
+  - id: p0_c14_c114_city
+    prompt: "Which city is customer C114 based in?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C114}
+      answer: {city: "Kumasi"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: city, register: direct}
+
+  - id: p0_c15_c115_status
+    prompt: "Check customer C115 and tell me their account status."
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C115}
+      answer: {status: "suspended"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: status, register: imperative}
+
+  - id: p0_c16_c116_name
+    prompt: "I need the account holder name for customer C116."
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C116}
+      answer: {name: "Anders Vikstrom"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: name, register: stated_need}
+
+  - id: p0_c17_c117_email
+    prompt: "What is the email address of customer C117?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C117}
+      answer: {email: "nokonkwo@example.test"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: email, register: direct}
+
+  - id: p0_c18_c118_city
+    prompt: "Look up customer C118 and tell me which city they are based in."
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C118}
+      answer: {city: "Kochi"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: city, register: imperative}
+
+  - id: p0_c19_c119_status
+    prompt: "I need the current account status for customer C119."
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C119}
+      answer: {status: "active"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: status, register: stated_need}
+
+  - id: p0_c20_c120_name
+    prompt: "Customer C120 - what name is on the account?"
+    expected:
+      tool: get_customer
+      arguments: {customer_id: C120}
+      answer: {name: "Jonas Wieczorek"}
+    answer_strategy: contains_facts
+    metadata: {exposure: direct, entity: customer, field: name, register: trailing_id}
+  - id: p0_n01_o203_status
+    prompt: "What is the status of order O203?"
+    expected:
+      tool: get_order
+      arguments: {order_id: O203}
+      answer: {status: "cancelled"}
+    answer_strategy: contains_facts
+    metadata: {exposure: non_target, entity: order, field: status, register: direct}
+
+  - id: p0_n02_o208_total
+    prompt: "Look up order O208 and tell me the total amount."
+    expected:
+      tool: get_order
+      arguments: {order_id: O208}
+      answer: {value: 68.00, type: number}
+    answer_strategy: typed_scalar
+    metadata: {exposure: non_target, entity: order, field: total_amount, register: imperative}
+
+  - id: p0_n03_i306_amount_due
+    prompt: "I need the amount due on invoice I306."
+    expected:
+      tool: get_invoice
+      arguments: {invoice_id: I306}
+      answer: {value: 212.75, type: number}
+    answer_strategy: typed_scalar
+    metadata: {exposure: non_target, entity: invoice, field: amount_due, register: stated_need}
+
+  - id: p0_n04_i309_status
+    prompt: "Invoice I309 - what is its status?"
+    expected:
+      tool: get_invoice
+      arguments: {invoice_id: I309}
+      answer: {status: "overdue"}
+    answer_strategy: contains_facts
+    metadata: {exposure: non_target, entity: invoice, field: status, register: trailing_id}
+
+  - id: p0_n05_p505_category
+    prompt: "What category is product P505 in?"
+    expected:
+      tool: get_product
+      arguments: {product_id: P505}
+      answer: {category: "bags"}
+    answer_strategy: contains_facts
+    metadata: {exposure: non_target, entity: product, field: category, register: direct}
+
+  - id: p0_n06_p511_price
+    prompt: "Look up product P511 and tell me its price."
+    expected:
+      tool: get_product
+      arguments: {product_id: P511}
+      answer: {value: 68.00, type: number}
+    answer_strategy: typed_scalar
+    metadata: {exposure: non_target, entity: product, field: price, register: imperative}
+
+  - id: p0_n07_e106_office
+    prompt: "I need to know which office employee E106 is assigned to."
+    expected:
+      tool: get_employee
+      arguments: {employee_id: E106}
+      answer: {office: "Uppsala"}
+    answer_strategy: contains_facts
+    metadata: {exposure: non_target, entity: employee, field: office, register: stated_need}
+
+  - id: p0_n08_e109_role
+    prompt: "Employee E109 - what is their role?"
+    expected:
+      tool: get_employee
+      arguments: {employee_id: E109}
+      answer: {role: "Product Specialist"}
+    answer_strategy: contains_facts
+    metadata: {exposure: non_target, entity: employee, field: role, register: trailing_id}

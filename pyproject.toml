@@ -9,6 +9,7 @@ dependencies = [
     "anthropic>=1.2.0",  # M3: first real provider adapter (no paid path without --allow-paid)
     # Kept deliberately minimal. Dependencies are added by the milestone that first
     # uses them (see AGENTS.md s6), not because they appear in SPEC.md s7.
+    "matplotlib>=3.11.1",  # M4: the single Phase 0 comparison chart
     "mcp>=2.1.1",       # M1: real MCP server and client
     "pyarrow>=25.0.1",  # M2: Parquet result persistence
     "pydantic>=2.13.5", # M1: typed fixture records and tool result envelopes

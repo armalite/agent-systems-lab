@@ -215,42 +215,37 @@ If those answers are not clear from the repository, fixing the documentation is 
 
 *Keep this section accurate. It is the fastest answer to "what exists?" for a new agent.*
 
-**Current milestone:** Milestone 3 - first real provider. **Complete**, including live smoke
-validation against `claude-opus-5` (3/3 routing, 3/3 task success, ~$0.037).
+**Current milestone:** Milestone 4 - Phase 0 calibration. **Apparatus and pre-registration
+complete and validated offline. Phase 0 has NOT been executed and no Phase 0 model result has
+been observed.**
 
 **Implemented:**
 
-- *M0* - `uv` project, `--version` CLI, ruff/pyright/pytest, `paid` marker, research notebook.
-- *M1* - `agent_lab.synthetic`: fixtures, pure deterministic tools, two tool-spaces, thin stdio
-  `MCPServer` adapter. `agent_lab.mcp.client`: stdio client + canonical tool-surface projection.
-- *M2* - the harness: environments, tasks, config, runner (owns the agent loop), scripted fake
-  adapter, versioned metric sets, ordered JSONL traces, result derivation, Parquet persistence,
-  `agent-lab validate` / `run`, `experiments/harness_check/`.
-- *M3* - `agent_lab.models.anthropic` (one model turn), `agent_lab.models.provider` (paid gate,
-  request budget, secret redaction), provider trace layer and events, `provider_surface`
-  fingerprint plus exact per-turn request bodies, `--allow-paid`, `clean harness-check`, and
-  `experiments/smoke_anthropic/` (3 tasks, classification `harness_check`).
+- *M0-M3* - `uv` project and tooling; deterministic synthetic MCP environment with two
+  tool-spaces; the harness (runner-owned agent loop, tracing, deterministic derivation, versioned
+  metrics, Parquet); the Anthropic one-turn adapter with paid gate, request budget, exact
+  per-turn provider requests, and three-way surface fingerprinting.
+- *M4 (apparatus)* - customer fixtures expanded 12 -> 20; frozen 28-task Phase 0 set (20 direct
+  exposure + 8 non-target, 28 distinct records); deterministic pair-adjacent counterbalanced
+  execution schedule persisted as evidence; source provenance and `schedule_index` recorded in the
+  raw trace and derived into rows; trace and result schemas at 1.2.0; `agent_lab.analysis.phase0`;
+  `research/preregistration/PHASE0.md`.
 
 **Architectural invariants (each enforced by test):**
 
 - `synthetic/{models,data,tools,toolspaces}.py` never import `mcp`.
-- The runner owns the agent loop; an adapter produces exactly one model turn and never loops.
-- `derive_result` reads only trace events and ignores `EVALUATION_COMPLETED`.
-- **Four representations stay separate**: environment descriptor, canonical model surface, stable
-  provider surface, and the exact full provider request body for every turn. The first three are
-  fingerprinted; the exact request is evidence and gets its own per-turn hash.
+- The runner owns the agent loop; an adapter produces exactly one model turn.
+- `derive_result` reads only trace events; re-derivation from persisted traces must stay equal.
+- Four representations stay separate: environment descriptor, model surface, provider surface,
+  and the exact per-turn provider request.
 - Provider-native assistant blocks are replayed verbatim; the runner never interprets them.
 - Paid execution requires `--allow-paid` per invocation plus a declared request budget.
-  Credentials authorize nothing.
+- Conditions interleave on a deterministic schedule; they are never executed in blocks.
+- The Phase 0 headline is the direct-exposure stratum only; strata are never pooled.
 
-**Not yet implemented:** Phase 0 calibration dataset, pre-registration record, comparison and
-plot (M4); DuckDB analysis ergonomics and `summarize`/`compare`/`inspect` (M5).
-
-**Exercised live vs. offline only:** request construction, tool rendering, tool-result
-round-tripping, response mapping, usage, and the provider-error path are all validated against
-the real API. The **verbatim thinking-block replay path is exercised offline only** - adaptive
-thinking returned zero thinking tokens on the smoke tasks (Observation O-004). Do not describe it
-as live-validated.
+**Not yet done:** the Phase 0 execution itself (requires fresh paid authorization and a clean
+committed tree); analysis of real results; observations; the mandatory stop and novelty gate
+before any frontier question; M5 analysis ergonomics.
 
 **Active research question:** none. Phase 0 is calibration only, and no novelty gate has been run.
 
@@ -273,6 +268,13 @@ canonical statement and the section references below are the place to check the 
   metrics themselves.
 - When a claim generalizes across tasks, repetitions of one task are **within-task replicates**.
   Never count them as additional independent task observations (`SPEC.md` s14.1, s16).
+- **Execution order is experimental design.** Where time, provider state, or a mutable model alias
+  could drift, pre-register a deterministic or reproducibly seeded run order that interleaves the
+  conditions, and persist the realized schedule as evidence. Never run one condition to completion
+  and then the other, and never change the schedule after seeing results (`SPEC.md` s14.1, v2.5).
+- **Never pool a directly manipulated stratum with a non-target/spillover stratum.** When a
+  manipulation targets only part of a task set, declare both strata before results are observed
+  and report the headline on the targeted stratum only (`SPEC.md` s14.1, s16, v2.5).
 - Secondary metrics are diagnostic unless pre-registered as claim-bearing. Promoting one after
   results are observed requires a **new metric definition set/version** and must be labelled a
   new analysis, never presented as pre-registered (`SPEC.md` s14.1).

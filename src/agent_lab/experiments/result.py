@@ -20,9 +20,11 @@ from agent_lab.experiments.tasks import Task
 from agent_lab.tracing import events as ev
 from agent_lab.tracing.events import TraceEvent
 
-RESULT_SCHEMA_VERSION = "1.1.0"
-"""1.1.0 adds provider-boundary fields (Milestone 3). Rows written under different result
-schema versions must not be compared as equivalent."""
+RESULT_SCHEMA_VERSION = "1.2.0"
+"""1.1.0 added provider-boundary fields (Milestone 3). 1.2.0 adds `schedule_index` and populates
+`source_commit_sha` / `source_tree_dirty`, all derived from the `RUN_STARTED` trace event rather
+than injected independently. Rows written under different result schema versions must not be
+compared as equivalent."""
 
 
 class ToolCallRecord(BaseModel):
@@ -118,6 +120,10 @@ class ResultRow(BaseModel):
     latency_ms: float | None
 
     repetition: int
+    schedule_index: int | None
+    """Position in the frozen execution order, derived from the trace. Lets an analysis check
+    for drift against execution time (`SPEC.md` s14.1, v2.5)."""
+
     random_seed_if_applicable: int | None = None
     trace_path: str
 
@@ -257,6 +263,18 @@ def _extract(events: Sequence[TraceEvent]) -> _Extracted:
     )
 
 
+def _optional_str(value: Any) -> str | None:
+    return None if value is None else str(value)
+
+
+def _optional_bool(value: Any) -> bool | None:
+    return None if value is None else bool(value)
+
+
+def _optional_int(value: Any) -> int | None:
+    return None if value is None else int(value)
+
+
 def derive_result(
     *,
     events: Sequence[TraceEvent],
@@ -303,8 +321,9 @@ def derive_result(
         experiment_id=head.experiment_id,
         experiment_classification=resolved.config.classification,
         timestamp=head.timestamp,
-        source_commit_sha=None,
-        source_tree_dirty=None,
+        # Derived from the authoritative raw evidence, never injected independently.
+        source_commit_sha=_optional_str(started.payload.get("source_commit_sha")),
+        source_tree_dirty=_optional_bool(started.payload.get("source_tree_dirty")),
         harness_version=str(started.payload["harness_version"]),
         trace_schema_version=head.trace_schema_version,
         metric_definition_id=metric_set.id,
@@ -357,5 +376,6 @@ def derive_result(
         output_tokens=extracted.output_tokens,
         latency_ms=extracted.latency_ms,
         repetition=head.repetition,
+        schedule_index=_optional_int(started.payload.get("schedule_index")),
         trace_path=str(trace_path),
     )

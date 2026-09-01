@@ -93,6 +93,7 @@ RESULT_SCHEMA = pa.schema(
         pa.field("output_tokens", pa.int64()),
         pa.field("latency_ms", pa.float64()),
         pa.field("repetition", pa.int32()),
+        pa.field("schedule_index", pa.int32()),
         pa.field("random_seed_if_applicable", pa.int64()),
         pa.field("trace_path", pa.string()),
     ]

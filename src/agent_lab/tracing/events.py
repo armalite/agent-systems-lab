@@ -12,9 +12,12 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-TRACE_SCHEMA_VERSION = "1.1.0"
-"""1.1.0 adds the `provider` layer and the provider-boundary events (Milestone 3). Traces
-written under 1.0.0 remain readable; the new context field defaults to empty."""
+TRACE_SCHEMA_VERSION = "1.2.0"
+"""1.1.0 added the `provider` layer and the provider-boundary events (Milestone 3).
+1.2.0 adds source-provenance and execution-schedule fields to the `RUN_STARTED` payload
+(`schedule_index`, `task_index`, `source_commit_sha`, `source_tree_dirty`), from which the
+normalized row derives them. Traces written under 1.0.0/1.1.0 remain readable; the context
+field added in 1.1.0 defaults to empty."""
 
 Layer = Literal["harness", "model", "mcp", "tool", "provider", "evaluator"]
 

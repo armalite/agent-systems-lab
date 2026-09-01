@@ -1,12 +1,12 @@
 # Agent Systems Lab - Research & Build Specification
 
 **Status:** Active research specification  
-**Version:** 2.4  
+**Version:** 2.5  
 **Repository:** `agent-systems-lab`
 
-### Version 2.4 methodological clarifications
+### Version 2.5 methodological clarifications
 
-Version 2.4 preserves the existing research direction, milestone structure, and novelty gate. It adds proportionate quantitative-design discipline before Phase 0 and records design constraints that apply only if persistent memory later becomes novelty-gated experimental material.
+Version 2.5 preserves the existing research direction, milestone structure, novelty gate, and v2.4 quantitative/memory discipline. It closes several Phase 0 design gaps exposed while planning the first real calibration experiment.
 
 Earlier versions established:
 
@@ -48,6 +48,15 @@ Version 2.4 additionally clarifies:
 - naturally acquired/learned memory must be distinguished from synthetic, hand-authored, or transformed control material rather than treating one provenance type as universally required;
 - memory retention/invalidation/revalidation policies are experimental conditions when compared, and their operational cost must be observable as an outcome;
 - these memory constraints do not authorize a memory implementation or bypass the mandatory novelty gate.
+
+Version 2.5 additionally clarifies:
+
+- execution order is experimental design: when provider/model state or time drift could confound conditions, run ordering/counterbalancing must be pre-registered, deterministic or reproducibly seeded, and persisted as evidence;
+- when a manipulation directly targets only part of a task set, the affected and non-target/spillover strata must be declared before results are observed and must not be silently pooled into one headline effect;
+- fixture/task material may be expanded or corrected before the experiment is frozen, but once the pre-registration binds the task/fixture set, it becomes immutable for that execution except through a new explicitly versioned design;
+- operational-failure handling may invalidate an entire execution rather than replacing individual cells; the chosen unit of invalidation/replacement must be pre-registered and incomplete and replacement executions must remain distinct;
+- provider-request ceilings must not be lower than the maximum valid execution path allowed by the experiment's own run/step limits;
+- request-count limits bound request count, not spend; expected/planning cost and theoretical token exposure must be described separately where paid execution is material.
 
 
 ---
@@ -1077,8 +1086,10 @@ Before observing the real experimental comparison, pre-register:
 - the **unit of analysis/generalization** appropriate to the claim;
 - how repeated runs of the same task are treated;
 - the aggregation rule used to produce task-level and condition-level metrics;
+- any pre-declared strata/subgroups required because the manipulation targets only part of the task set;
+- the execution-order/counterbalancing rule when time/provider drift could confound conditions;
 - the planned task count, repetition count, and provider/request budget;
-- the stopping/replacement rule for invalid executions;
+- the stopping/replacement rule for invalid executions, including whether invalidity applies to individual runs/cells or to the entire execution;
 - the smallest effect on the primary metric considered **practically meaningful**;
 - the intended uncertainty/reporting method.
 
@@ -1087,6 +1098,12 @@ Before observing the real experimental comparison, pre-register:
 Repetitions of the same task within a condition may be useful within-task replicates for estimating model stochasticity. When a claim is intended to generalize across tasks, those repetitions must remain nested within task rather than being silently counted as additional independent task samples.
 
 Do not impose a universal analysis unit on every future experiment. Run-level, task-level, paired-task, condition-level, or other analysis may be appropriate depending on the hypothesis; the choice and aggregation rule must be declared before results are observed and must not drift during analysis.
+
+**Execution order can be a confound.**
+
+When condition is correlated with execution time, provider state, mutable model aliases, transient infrastructure state, cache state, or other plausible drift, the order of runs becomes part of the experiment.
+
+Use a pre-registered ordering strategy that reduces avoidable confounding, such as deterministic counterbalancing/interleaving for paired conditions. Persist enough schedule information to reconstruct the exact order actually executed. If randomization is used, persist the seed and realized schedule. Do not silently change the schedule after observing results.
 
 **Practical importance and statistical detectability are distinct.**
 
@@ -1127,7 +1144,11 @@ Do not extend task count, repetitions, or provider-request budget merely because
 
 Operationally invalid executions (for example authentication/billing failures or provider outages that produce no model observation) may be replaced or excluded only according to a declared failure/replacement rule, must retain distinct execution evidence, and must not be confused with inconvenient but valid model outcomes.
 
-The declared rule must also state how unequal valid repetition counts are handled. Replacing invalid executions can preserve equal within-task replication; dropping them can produce unequal precision across tasks/conditions and therefore changes the appropriate aggregation or uncertainty treatment. Do not silently apply an equal-weight analysis that assumes a balanced design when the retained evidence is unbalanced.
+The rule may operate at the individual-run/cell level **or invalidate the entire physical execution**. A whole-execution strategy is acceptable when it better preserves a balanced frozen design. In that case, incomplete and replacement executions must remain separate, must never be silently combined for the headline analysis, and any paid rerun requires fresh authorization.
+
+If invalid runs are instead retained/excluded at finer granularity, the declared rule must state how unequal valid repetition counts are handled. Dropping runs can produce unequal precision across tasks/conditions and therefore changes the appropriate aggregation or uncertainty treatment. Do not silently apply an analysis that assumes a balanced design when the retained evidence is unbalanced.
+
+A provider/request ceiling must be large enough to permit every valid trajectory allowed by the experiment's own `max_steps` or equivalent limits. Request-count budgets constrain call count, not token spend; where cost matters, distinguish expected/planning spend from theoretical maximum token exposure rather than calling request count a hard dollar ceiling.
 
 If an experiment is intentionally sequential/adaptive, its stopping rule and any required inferential correction must be pre-registered. If a fixed design is extended after looking at results, record the deviation explicitly and do not present the enlarged analysis as if the original stopping rule were preserved.
 
@@ -1236,11 +1257,14 @@ Before the first real Phase 0 run:
 2. record their environment and model-surface fingerprints;
 3. verify that no research-design language leaks into the model-visible surface;
 4. pre-register the primary routing metric and secondary recovery/task-success metrics;
-5. freeze the task set and evaluator definitions for that calibration run;
-6. pre-register the analysis unit/generalization target, repeated-run aggregation rule, and uncertainty/reporting method;
-7. freeze the exact task count, repetition count, provider/request budget, and stopping/replacement rule;
-8. declare the smallest primary-metric difference considered practically meaningful; for Phase 0 treat any defensible detectability/MDE estimate primarily as an **instrument-sensitivity statement** (what this calibration design can reliably resolve), not as a requirement that calibration must produce a particular regression size;
-9. if an A/A or equivalent repeatability check is used, pre-register it as apparatus calibration and keep it distinct from the baseline-vs-overlap research comparison.
+5. freeze the exact fixture/task set and evaluator definitions for that calibration run;
+6. pre-register the analysis unit/generalization target, repeated-run aggregation rule, uncertainty/reporting method, and any direct-exposure versus non-target/spillover strata;
+7. pre-register the deterministic/reproducibly seeded execution-order strategy and persist the realized schedule;
+8. freeze the exact task count, repetition count, provider/request budget, and stopping/replacement rule, including whether operational failure invalidates individual runs or the whole execution;
+9. declare the smallest primary-metric difference considered practically meaningful; for Phase 0 treat any defensible detectability/MDE estimate primarily as an **instrument-sensitivity statement** (what this calibration design can reliably resolve), not as a requirement that calibration must produce a particular regression size;
+10. if an A/A or equivalent repeatability check is used, pre-register it as apparatus calibration and keep it distinct from the baseline-vs-overlap research comparison.
+
+Fixture/task data may be expanded or corrected while Phase 0 is still being designed. Once the pre-registration is committed and its task/fixture fingerprints are frozen, do not modify that material for the bound execution. A changed task or fixture set constitutes a new explicitly versioned design, not a continuation of the frozen one.
 
 ### Phase 0 analysis unit
 
@@ -1254,6 +1278,8 @@ For the primary routing metric:
 4. retain all run-level rows and traces as evidence, but do not treat repeated runs of one task as additional independent task samples for claim-bearing interpretation.
 
 This choice is specific to Phase 0's frozen paired task set. Future novelty-gated experiments may choose a different unit when their hypothesis requires it, but must pre-register that choice.
+
+If the Phase 0 manipulation directly targets only a subset of expected tools/tasks, pre-register that **direct-exposure stratum** separately from any **non-target/spillover stratum**. The headline calibration effect should be computed on the stratum the manipulation directly targets unless the pre-registration gives a principled reason to pool. Non-target tasks may be reported separately to reveal broader tool-space/context spillover, but must not be silently mixed into the primary targeted effect.
 
 ### Initial execution
 

@@ -159,11 +159,15 @@ records the commit, result paths, findings, limitations, and the next question.
 
 ---
 
-## Phase 0 pre-registration (required before Milestone 4 runs)
+## Phase 0 pre-registration
 
-Before any Phase 0 calibration run is executed, and **before its results are observed**, record
-here: the primary and secondary routing/recovery metric definitions, the exact meaning of
-`tool_selection_correct` under multi-call runs, and the condition-comparison method. Defining
-these after seeing results would make the calibration unfalsifiable.
+**Written and frozen: [`research/preregistration/PHASE0.md`](preregistration/PHASE0.md).**
 
-*Not yet written - Milestone 4 is not in scope.*
+That document is the binding design record - strata, task set, fingerprints, metrics, unit of
+generalization, aggregation, execution schedule, practical-effect threshold, uncertainty method,
+operational-validity rule, model controls, and budget. It is committed **before** any Phase 0
+provider call, and every trace and result row records `source_commit_sha` / `source_tree_dirty`,
+so precedence is verifiable rather than asserted.
+
+**Phase 0 has not been executed.** No Phase 0 model result has been observed. Results will be
+recorded here and in `research/observations.md` after execution, never in the pre-registration.

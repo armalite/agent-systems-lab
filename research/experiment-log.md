@@ -159,6 +159,90 @@ records the commit, result paths, findings, limitations, and the next question.
 
 ---
 
+## 2026-09-01 - Milestone 4: Phase 0 calibration (COMPLETE)
+
+- **Type:** Calibration / positive control. **Not a novel research contribution** and not the
+  intended frontier question (`SPEC.md` s16).
+- **Bound by:** [`research/preregistration/PHASE0.md`](preregistration/PHASE0.md), committed
+  before any Phase 0 provider call.
+- **Source commit:** `55030e4b6a3d06d093c17bcaa16bb32f5efb6e04`, `source_tree_dirty: false`.
+
+### Physical executions
+
+Two physical executions exist and must remain clearly distinct. They are never combined.
+
+**`20260901T103826Z` - OPERATIONALLY INVALID.** Three Anthropic HTTP 529 `overloaded_error`
+responses and one request timeout produced four provider-invalid runs of 280 (schedule positions
+53, 54, 64, 69; both conditions; four distinct tasks). Under the pre-registered whole-execution
+rule this invalidated the entire execution. **No headline analysis was produced from it** - the
+analysis gate refused, and no `phase0_analysis.json` or chart exists in that directory. The
+execution and all 280 traces are retained as apparatus evidence. ~$4.21 spent. See O-006.
+
+**`20260901T113003Z` - OPERATIONALLY COMPLETE.** Zero provider failures.
+
+- 280/280 valid runs (28 tasks x 2 conditions x 5 repetitions)
+- 560 provider requests (ceiling 1120)
+- 674,987 input + 36,340 output tokens, 0 cache
+- **~$4.28 estimated API cost**
+- All frozen fingerprints (config, task set, metric set, and all six environment / model-surface /
+  provider-surface values), the realized counterbalanced schedule, and clean-tree provenance
+  matched the pre-registration exactly.
+
+### Pre-registered headline result - direct-exposure stratum (n=20)
+
+| | |
+|---|---|
+| Baseline mean routing rate | **1.0000** |
+| Overlap mean routing rate | **0.8000** |
+| **Mean paired difference** | **-0.2000** |
+| 95% task-cluster bootstrap interval | **[-0.4000, -0.0500]** |
+| Pre-registered practical-effect threshold | 0.10 |
+| Tasks regressed / unchanged / improved | **4 / 16 / 0** |
+
+Final task success remained **100% in both direct conditions**: routing degraded while answer
+correctness did not.
+
+### Non-target / spillover stratum (n=8) - reported separately
+
+Baseline **1.0000**, overlap **1.0000**, mean paired difference **+0.0000**, 0 regressed. This
+stratum is **never pooled** into the direct-exposure headline, and at n=8 it is a coarse
+spillover indicator only, not a true negative control.
+
+### Descriptive patterns observed after results (NOT pre-registered claims)
+
+Exploratory and descriptive only. No additional hypothesis test, sweep, or metric was run on
+these, and none carries a claim.
+
+- All four regressed tasks queried the customer `status` field.
+- Four of the five frozen `status` tasks regressed.
+- All 20 regressed runs selected `get_customer_details` as the first tool.
+- All 20 retained the correct `customer_id`; argument correctness was 100/100 in both conditions.
+- No `email`, `city`, or `name` task regressed.
+- Every task-condition cell was either 0/5 or 5/5, so **no within-task variation was observed in
+  this calibration**. This is a Phase 0 empirical characteristic, not an apparatus observation.
+- The one non-regressing `status` task used the imperative prompt register. **n=1 provides no
+  basis for inference** and no conclusion is drawn from it.
+
+### Calibration outcome
+
+**`SPEC.md` s16 criteria satisfied.** The experiment was valid and controlled; model/tool
+interactions were fully inspectable; the evaluator correctly distinguished routing failure from
+answer correctness; the comparison was reproducible; and the outcome is explicable from preserved
+evidence as a single named tool substitution on a single field.
+
+**Phase 0 and Milestone 4 completed successfully.**
+
+- **Findings:** Observations **O-005** and **O-006**, both apparatus findings from the invalid
+  first execution. Neither is a research result.
+- **Limitations:** one routing archetype, one model, one environment version, one system prompt,
+  synthetic fixtures; `claude-opus-5` is a mutable alias, not an immutable snapshot; the
+  non-target stratum at n=8 cannot resolve small spillover.
+- **Next:** **MANDATORY STOP** (`SPEC.md` s16). Do not sweep tool count, naming, descriptions,
+  schemas, ordering, or models. The novelty gate (`SPEC.md` s3) must be invoked before selecting
+  the first frontier research question. Phase 0 is not the contribution.
+
+---
+
 ## Phase 0 pre-registration
 
 **Written and frozen: [`research/preregistration/PHASE0.md`](preregistration/PHASE0.md).**

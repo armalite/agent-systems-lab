@@ -215,43 +215,36 @@ If those answers are not clear from the repository, fixing the documentation is 
 
 *Keep this section accurate. It is the fastest answer to "what exists?" for a new agent.*
 
-**Current milestone:** Milestone 4 - Phase 0 calibration. **Apparatus and pre-registration
-complete and validated offline. Phase 0 has NOT been executed and no Phase 0 model result has
-been observed.**
+**Current milestone:** Milestone 4 - Phase 0 calibration. **Complete.** A valid calibration was
+executed and analysed; the **mandatory stop** at `SPEC.md` s16 is now in force.
 
-**Implemented:**
+**Implemented:** M0-M3 as before (project and tooling; deterministic synthetic MCP environment;
+the harness with runner-owned agent loop, tracing, deterministic derivation, versioned metrics and
+Parquet; the Anthropic one-turn adapter with paid gate, request budget, exact per-turn provider
+requests and three-way surface fingerprinting). *M4* adds the expanded customer fixtures (20), the
+frozen 28-task Phase 0 set, the deterministic counterbalanced execution schedule, trace-derived
+source provenance, `agent_lab.analysis.phase0`, and the committed
+`research/preregistration/PHASE0.md`.
 
-- *M0-M3* - `uv` project and tooling; deterministic synthetic MCP environment with two
-  tool-spaces; the harness (runner-owned agent loop, tracing, deterministic derivation, versioned
-  metrics, Parquet); the Anthropic one-turn adapter with paid gate, request budget, exact
-  per-turn provider requests, and three-way surface fingerprinting.
-- *M4 (apparatus)* - customer fixtures expanded 12 -> 20; frozen 28-task Phase 0 set (20 direct
-  exposure + 8 non-target, 28 distinct records); deterministic pair-adjacent counterbalanced
-  execution schedule persisted as evidence; source provenance and `schedule_index` recorded in the
-  raw trace and derived into rows; trace and result schemas at 1.2.0; `agent_lab.analysis.phase0`;
-  `research/preregistration/PHASE0.md`.
+**Phase 0 outcome:** executed at commit `55030e4b` from a clean tree. Physical execution
+`20260901T113003Z` is the valid one (280/280 runs, 560 requests, ~$4.28); `20260901T103826Z` is
+retained as an operationally invalid apparatus execution and is never combined with it. Headline
+(direct-exposure stratum, n=20): baseline 1.0000, overlap 0.8000, mean paired difference -0.2000,
+95% task-cluster bootstrap [-0.4000, -0.0500], 4 regressed / 16 unchanged / 0 improved, task
+success 100% in both conditions. Non-target stratum (n=8): 1.0000 vs 1.0000, reported separately
+and never pooled. `SPEC.md` s16 criteria satisfied.
 
-**Architectural invariants (each enforced by test):**
+**This is calibration, not a contribution.** It reproduces a known effect to validate the
+instrument. Do not describe it as a research finding.
 
-- `synthetic/{models,data,tools,toolspaces}.py` never import `mcp`.
-- The runner owns the agent loop; an adapter produces exactly one model turn.
-- `derive_result` reads only trace events; re-derivation from persisted traces must stay equal.
-- Four representations stay separate: environment descriptor, model surface, provider surface,
-  and the exact per-turn provider request.
-- Provider-native assistant blocks are replayed verbatim; the runner never interprets them.
-- Paid execution requires `--allow-paid` per invocation plus a declared request budget.
-- Conditions interleave on a deterministic schedule; they are never executed in blocks.
-- The Phase 0 headline is the direct-exposure stratum only; strata are never pooled.
+**Not yet done:** the novelty gate and selection of the first frontier question; M5 analysis
+ergonomics. **Do not start either without an explicit researcher decision.**
 
-**Not yet done:** the Phase 0 execution itself (requires fresh paid authorization and a clean
-committed tree); analysis of real results; observations; the mandatory stop and novelty gate
-before any frontier question; M5 analysis ergonomics.
+**Active research question:** none. No novelty gate has been run.
 
-**Active research question:** none. Phase 0 is calibration only, and no novelty gate has been run.
-
-**Observations recorded:** O-001, O-002, O-003 (model-visible leakage, all caught before any
-model experiment) and O-004 (real-provider behaviour vs. offline doubles). All are apparatus
-findings; none is a research result.
+**Observations recorded:** O-001 to O-004 (model-visible leakage and real-provider behaviour) and
+O-005, O-006 (CLI disclosure before validity was known; operational cost of whole-execution
+invalidation). All are apparatus findings; none is a research result.
 
 **Standing decisions carried forward.** `SPEC.md` v2.1 absorbed most of these; the spec is the
 canonical statement and the section references below are the place to check the detail.

@@ -30,6 +30,115 @@ instrument, not about agent behaviour.
 
 ---
 
+## 2026-09-01 - Observation O-005 (apparatus, not a research result)
+
+**Classification:** Methodological / apparatus. Milestone 4. Concerns the harness's reporting
+behaviour, not model behaviour. Recorded after the replacement Phase 0 execution.
+
+### Observation
+
+`agent-lab run` prints flat run-level behavioural aggregates - `primary ok X/Y` and
+`task ok X/Y` - on completion, unconditionally and before operational validity has been
+assessed.
+
+In physical execution `20260901T103826Z` those aggregates were printed even though the execution
+was subsequently invalidated: four of its 280 runs failed for provider reasons, and the
+pre-registered whole-execution rule (`research/preregistration/PHASE0.md` s12) therefore barred
+it from the headline analysis. The analysis gate did refuse correctly, but only *after* the
+summary had already been displayed.
+
+### Conditions
+
+Normal completion of a paid execution. The aggregates are printed by the CLI as progress output;
+they are never persisted, and they are not the pre-registered statistic (which is a task-paired
+mean over the direct-exposure stratum with repetitions clustered, not a flat count over runs).
+
+### Unexpected detail
+
+The ordering is backwards relative to the pre-registered validity rule. The rule exists so that
+an operationally incomplete execution contributes nothing to interpretation; the CLI discloses a
+behavioural summary from exactly such an execution before anyone knows it is invalid.
+
+### Why it matters
+
+Exposure to behavioural aggregates from an invalid execution is a route by which an invalidated
+run could influence what happens next - the decision whether to rerun, or later interpretive
+framing. This is a risk to methodological discipline, not evidence of harm.
+
+**No claim is made that this affected model behaviour, or that it affected the eventual valid
+Phase 0 result.** The valid execution `20260901T113003Z` used the same frozen design, task set,
+schedule, and metric definitions, and its analysis was produced by the pre-registered script
+without modification.
+
+### Candidate explanations
+
+Not applicable; the cause is known and is a straightforward ordering issue in the CLI.
+
+### Follow-up
+
+Consider suppressing the run-level aggregate line, or labelling it explicitly as progress output
+and withholding it, when any run in the execution carries a `provider_error_kind`. Not changed
+for the frozen Phase 0 design.
+
+---
+
+## 2026-09-01 - Observation O-006 (apparatus, not a research result)
+
+**Classification:** Methodological / apparatus. Milestone 4. Operational cost of the
+pre-registered validity rule. Recorded after the replacement Phase 0 execution.
+
+### Observation
+
+Transient provider failures carried a material operational cost under the pre-registered
+whole-execution invalidation rule at this experiment's scale.
+
+Physical execution `20260901T103826Z` encountered:
+
+- three Anthropic HTTP 529 `overloaded_error` responses;
+- one request timeout;
+- four provider-invalid runs out of 280;
+- approximately **$4.21** spent before the execution was rejected for headline analysis.
+
+The failures fell at schedule positions 53, 54, 64 and 69, affected both conditions and four
+distinct tasks, and produced no model observation. With SDK retries fixed at zero by design, each
+aborted its run rather than silently re-rolling a trajectory.
+
+### Conditions
+
+Frozen Phase 0 design, clean committed tree, 280 runs, 556 provider requests. The subsequent
+replacement execution `20260901T113003Z` ran the identical frozen design with zero provider
+failures, so nothing in the configuration was implicated.
+
+### Unexpected detail
+
+The rule behaved exactly as designed and the cost of that design became concrete: four transient
+faults discarded 276 otherwise-valid observations. The instrument was validated by the failure -
+the gate refused, evidence was retained, nothing was silently dropped - but the discard is not
+free.
+
+**This is a single observed occurrence and is not a provider failure-rate estimate.** No
+generalisation about Anthropic reliability is made or implied; two executions are not a basis for
+one.
+
+### Why it matters
+
+It quantifies, for this scale, what whole-execution invalidation costs when transient provider
+faults occur. That is information a future design needs in order to choose its invalidation unit
+deliberately rather than by default.
+
+### Follow-up
+
+**Design implication for later experiments only.** A future novelty-gated experiment may consider
+a pre-registered bounded retry policy, or fail-fast abort on the first provider error to avoid
+spending the remaining budget on evidence that will be discarded. Either would be a declared
+experimental control requiring its own pre-registration.
+
+**The frozen Phase 0 design is unchanged.** No modification was made to `SPEC.md`, the Phase 0
+pre-registration, runner behaviour, retry settings, timeout settings, or analysis rules as a
+result of this observation.
+
+---
+
 ## 2026-08-30 - Observation O-004 (apparatus, not a research result)
 
 **Classification:** Methodological / apparatus. Milestone 3, first live provider execution

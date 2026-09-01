@@ -57,9 +57,15 @@ evaluator reads only the trace, so every derived row can be recomputed from the 
 
 ## Current status
 
-**Milestone 3 complete: first real provider.** A complete experiment runs end to end against
-`claude-opus-5` through the same loop as the deterministic fake adapter, preserving full traces,
-exact provider requests, and reproducibly derived results.
+**Milestone 4 complete: Phase 0 calibration succeeded.** The lab detected a routing change when
+five semantically overlapping customer tools were added to a stable five-tool surface, on a
+frozen pre-registered 28-task design executed against `claude-opus-5`.
+
+Phase 0 is a **positive control on the instrument, not a research contribution** - it reproduces
+a known effect to show the apparatus can measure one. The result is not novel and is not
+presented as a finding about agent systems. See
+[`research/preregistration/PHASE0.md`](research/preregistration/PHASE0.md) for the frozen design
+and `research/experiment-log.md` for the outcome.
 
 | Milestone | State |
 |---|---|
@@ -67,12 +73,17 @@ exact provider requests, and reproducibly derived results.
 | M1 - deterministic synthetic MCP environment | ✅ complete |
 | M2 - core experiment harness | ✅ complete |
 | M3 - first real provider adapter | ✅ complete |
-| M4 - Phase 0 calibration experiment | not started |
+| M4 - Phase 0 calibration experiment | ✅ complete |
 | M5 - analysis ergonomics (DuckDB) | not started |
 | Research Gate 1 - select first frontier question | blocked on M0-M5 |
 
 **Active research question:** none. Phase 0 is *calibration only* - a positive control proving
 the instrument can detect a known effect. It is explicitly not the intended contribution.
+
+**Mandatory stop in force** (`SPEC.md` s16). After Phase 0 the lab does **not** proceed to a
+matrix of tool-count, naming, description, schema, ordering, or multi-model experiments. The
+novelty gate (`SPEC.md` s3) must be invoked and a frontier question explicitly selected before any
+further research programme is implemented.
 
 ## Installation
 

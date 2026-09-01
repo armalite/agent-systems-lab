@@ -55,6 +55,27 @@ flowchart TB
 The loop repeats until the model answers without calling a tool, or a step limit is reached. The
 evaluator reads only the trace, so every derived row can be recomputed from the evidence.
 
+## Why a custom research harness?
+
+Mature evaluation frameworks already exist, and this repository does not try to be one. The
+distinction is in what is being varied: an evaluation framework holds the environment fixed and
+measures the agent, whereas this lab treats the agent's capability environment as the thing under
+experimental manipulation.
+
+| Dimension                 | Inspect AI                                                         | Agent Systems Lab                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **Primary purpose**       | General-purpose framework for evaluating models and agents         | Purpose-built research instrument for controlled experiments on evolving agent systems                                |
+| **Typical question**      | "How well does this model/agent perform on these tasks?"           | "How does agent behaviour change when its capability environment changes?"                                            |
+| **Experimental unit**     | Tasks built from datasets, solvers and scorers                     | Frozen experimental conditions, tasks, repetitions and pre-registered metrics                                         |
+| **Tools / MCP**           | Tools and MCP are capabilities agents can use during evaluation    | The tool/capability surface can itself be the manipulated experimental variable                                       |
+| **Model-visible surface** | Strong logging and evaluation observability                        | Explicit environment -> model -> provider surfaces, fingerprints, exact-request preservation and leakage auditing     |
+| **Methodology focus**     | Reproducible evaluation and benchmark execution                    | Experimental control: pre-registration, provenance, counterbalancing, calibration and controlled condition comparison |
+| **Best fit**              | Benchmarking, safety evaluation and general model/agent assessment | Research into tool-space interference, capability evolution and potentially persistent procedural context/memory      |
+
+> **Agent Systems Lab is not intended to replace Inspect AI.** Its scope is deliberately narrower:
+> it exists to make changes to an agent's capability environment experimentally controllable and
+> auditable.
+
 ## Current status
 
 **Milestone 4 complete: Phase 0 calibration succeeded.** The lab detected a routing change when

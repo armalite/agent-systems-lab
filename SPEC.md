@@ -1,12 +1,12 @@
 # Agent Systems Lab - Research & Build Specification
 
 **Status:** Active research specification  
-**Version:** 2.7  
+**Version:** 2.8  
 **Repository:** `agent-systems-lab`
 
-### Version 2.7 methodological clarifications
+### Version 2.8 roadmap clarification
 
-Version 2.7 preserves the existing research direction, milestone structure, novelty gate, Phase 0 result, and v2.6 dual-repository provenance model. It clarifies persisted trace-path semantics for external result roots so execution evidence does not depend on developer-machine absolute paths.
+Version 2.8 preserves the existing research direction, experimental contracts, novelty gate, Phase 0 result, and v2.7 provenance model. It corrects the post-calibration roadmap so the novelty gate follows completion of the calibrated initial instrument rather than being blocked by speculative analysis-ergonomics work.
 
 Earlier versions established:
 
@@ -74,6 +74,16 @@ Version 2.7 additionally clarifies:
 - persisted `trace_path` is an **execution-root-relative path** to the authoritative raw trace, not an absolute filesystem path;
 - the physical execution/results root itself may live anywhere, including an external/private research workspace, but machine-specific absolute paths are not part of normalized experiment evidence;
 - historical result rows keep the path semantics of the schema version under which they were originally produced and are not rewritten or migrated.
+
+Version 2.8 additionally clarifies:
+
+- Milestones 0-4 establish and calibrate the initial research instrument;
+- **Research Gate 1 occurs immediately after Milestone 4 / successful Phase 0 calibration**;
+- further analysis ergonomics are a deferred research-enablement backlog, not a prerequisite for novelty review or frontier-question selection;
+- there is intentionally **no pre-written Milestone 5** after calibration;
+- the novelty review, calibration evidence, and selected research question determine what Milestone 5 should be;
+- a future Milestone 5 may be a small apparatus capability, a pilot, or a frontier experiment, depending on what the selected question actually requires;
+- no memory capability, generic analysis layer, or other future platform feature is authorized merely because it appears useful in advance.
 
 
 ---
@@ -1668,7 +1678,9 @@ If these files do not make those answers clear, update the documentation.
 
 ## 23. Implementation Milestones
 
-These milestones establish the **research instrument**. They are not a commitment to a fixed research roadmap.
+Milestones 0-4 establish and calibrate the **initial research instrument**. They are not a commitment to a fixed frontier-research roadmap.
+
+After Milestone 4, stop and pass through Research Gate 1 before defining another implementation milestone.
 
 ### Milestone 0 - Repository foundation
 
@@ -1789,38 +1801,48 @@ Acceptance:
 
 The researcher can inspect both aggregate results and every individual regressed/recovered task, and can verify that metric definitions and model-visible surfaces were fixed before observing the real model results.
 
-### Milestone 5 - Analysis ergonomics
-
-Deliver only what is necessary to make research iteration efficient:
-
-- DuckDB querying;
-- run inspection;
-- regression extraction;
-- condition comparison.
-
-Acceptance:
-
-The researcher can quickly answer questions such as:
-
-> "Which tasks succeeded before the capability change and failed after it?"
-
 ### Research Gate 1 - Select first frontier question
 
-After Milestones 0-5:
+Immediately after Milestone 4 / successful Phase 0 calibration:
 
-**Do not continue automatically.**
+**Do not continue automatically into another implementation milestone.**
 
 1. summarize calibration results;
 2. record observations;
 3. inspect unexpected behaviour;
-4. perform current-literature novelty search;
-5. select a frontier research question;
-6. write its novelty review and hypothesis/exploratory objective;
-7. only then define the next implementation milestone.
+4. perform a current-literature novelty search;
+5. select, narrow, reframe, or stop the candidate frontier direction based on that review;
+6. write the novelty review and the resulting hypothesis or exploratory objective;
+7. identify the smallest additional apparatus capability, if any, required to test that question;
+8. only then define Milestone 5.
 
-There is intentionally **no pre-written Milestone 6**.
+There is intentionally **no pre-written Milestone 5**.
 
-The evidence determines Milestone 6.
+The evidence and current literature determine Milestone 5.
+
+A valid Milestone 5 might be:
+
+- a small generic apparatus extension required by the selected question;
+- a controlled pilot that validates a newly required experimental surface;
+- the first frontier experiment itself if the existing apparatus is already sufficient.
+
+Do not assign a milestone number to infrastructure merely because it is convenient to build.
+
+### Deferred research-enablement backlog - not a gate
+
+Further analysis ergonomics may be useful, including:
+
+- richer DuckDB querying;
+- run inspection;
+- regression extraction;
+- condition comparison;
+- study-specific comparison/reporting helpers.
+
+These are **not** prerequisites for Research Gate 1.
+
+Implement or promote them into a milestone only when an active research question makes the need concrete. Prefer the smallest ergonomics that reduce real research friction over a generic analysis platform designed in advance.
+
+Existing analysis capabilities remain valid and may continue to be used; this change only removes speculative ergonomics work as a blocker to research-question selection.
 
 ---
 
@@ -1855,6 +1877,8 @@ Do not treat the specification as evidence that a research hypothesis is novel. 
 
 ## 25. Definition of Done for the Initial Instrument
 
+Milestones 0-4 define the build/calibration sequence for the initial instrument. Additional analysis ergonomics are not a prerequisite for entering Research Gate 1.
+
 The lab is established when:
 
 1. a clean clone installs and tests locally;
@@ -1872,7 +1896,7 @@ The lab is established when:
 
 At this point:
 
-> **Stop building the platform. Start selecting research questions.**
+> **Stop building the platform. Enter Research Gate 1 and start selecting research questions.**
 
 ---
 

@@ -173,8 +173,8 @@ sampling, or model configuration - present it to the researcher instead of choos
 If something in `SPEC.md` looks technically problematic, outdated, unnecessarily complex, or
 inconsistent with the research goal, say so rather than implementing it blindly.
 
-**Hard stops** written into the spec: after Phase 0 calibration (§16), and at Research Gate 1
-after Milestone 5 (§23). At a hard stop, report and wait.
+**Hard stops** written into the spec: after Phase 0 calibration (§16), which is immediately
+followed by Research Gate 1 (§23). At a hard stop, report and wait.
 
 ---
 
@@ -237,8 +237,14 @@ and never pooled. `SPEC.md` s16 criteria satisfied.
 **This is calibration, not a contribution.** It reproduces a known effect to validate the
 instrument. Do not describe it as a research finding.
 
-**Not yet done:** the novelty gate and selection of the first frontier question; M5 analysis
-ergonomics. **Do not start either without an explicit researcher decision.**
+**Next stage: Research Gate 1** (`SPEC.md` §3, §23) - select the first frontier question. It
+follows Milestone 4 immediately; nothing else is scheduled before it.
+
+**There is intentionally no Milestone 5.** The novelty review, the calibration evidence, and the
+selected question determine what M5 should be. Do **not** build analysis ergonomics, memory, or any
+other apparatus capability merely because it looks useful - a current literature/novelty review
+determines the research direction, and the research direction determines the next milestone. Do not
+start the gate without an explicit researcher decision.
 
 **Active research question:** none. No novelty gate has been run.
 

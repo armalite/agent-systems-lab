@@ -95,8 +95,8 @@ and `research/experiment-log.md` for the outcome.
 | M2 - core experiment harness | ✅ complete |
 | M3 - first real provider adapter | ✅ complete |
 | M4 - Phase 0 calibration experiment | ✅ complete |
-| M5 - analysis ergonomics (DuckDB) | not started |
-| Research Gate 1 - select first frontier question | blocked on M0-M5 |
+| **Research Gate 1 - select first frontier question** | ⬅ **next stage** |
+| M5 | **intentionally undefined** until the gate completes |
 
 **Active research question:** none. Phase 0 is *calibration only* - a positive control proving
 the instrument can detect a known effect. It is explicitly not the intended contribution.
@@ -105,6 +105,14 @@ the instrument can detect a known effect. It is explicitly not the intended cont
 matrix of tool-count, naming, description, schema, ordering, or multi-model experiments. The
 novelty gate (`SPEC.md` s3) must be invoked and a frontier question explicitly selected before any
 further research programme is implemented.
+
+**The calibrated instrument exists. The next step is choosing what to point it at, not extending
+it.** Milestones 0-4 built and calibrated it; Research Gate 1 follows immediately. There is
+deliberately no pre-written Milestone 5 - the novelty review, the calibration evidence, and the
+selected question determine what it should be. Further analysis ergonomics (DuckDB querying, run
+inspection, regression extraction, condition comparison) remain a **deferred research-enablement
+backlog**, promoted only when an active research question creates a concrete need. They are not a
+prerequisite for the gate.
 
 ## Installation
 
@@ -171,7 +179,8 @@ Delete disposable harness-check output (and nothing else):
 uv run agent-lab clean harness-check
 ```
 
-`summarize`, `compare`, and `inspect` arrive with Milestone 5.
+`summarize`, `compare`, and `inspect` are **deferred backlog**, not a scheduled milestone. They
+arrive if and when a selected research question needs them.
 
 ## The synthetic environment
 

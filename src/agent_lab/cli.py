@@ -1,8 +1,8 @@
 """Command-line entry point.
 
-Milestone 3 exposes `validate`, `run`, and `clean harness-check`. `summarize`, `compare`, and
-`inspect` arrive with the analysis ergonomics of Milestone 5; persisted traces and results are
-the source of truth in the meantime.
+Exposes `validate`, `run`, and `clean harness-check`. Analysis ergonomics (`summarize`,
+`compare`, `inspect`) are a deferred backlog rather than a scheduled milestone (`SPEC.md` s23):
+persisted traces and results are the source of truth, and DuckDB queries them directly.
 """
 
 import asyncio
@@ -61,6 +61,21 @@ def validate(
     typer.echo(f"config fingerprint    {resolved.config_fingerprint}")
     typer.echo(f"task set fingerprint  {resolved.task_set_fingerprint}")
     typer.echo(f"script set fingerprint {resolved.script_set_fingerprint}")
+    if resolved.memory is not None:
+        # Resolved here too, so the exact model-visible memory can be inspected before any run.
+        from agent_lab.memory.resolve import resolve_memory
+
+        resolved_memory = resolve_memory(resolved.memory)
+        typer.echo(f"memory corpus         {resolved.memory.descriptor.id}")
+        typer.echo(f"memory policy         {resolved.memory.policy.id}")
+        typer.echo(f"memory presentation   {resolved.memory.presentation.id}")
+        typer.echo(
+            f"memory entries        {resolved_memory.surface.entry_count} active "
+            f"of {len(resolved.memory.descriptor.entries)} declared"
+        )
+        typer.echo(f"memory descriptor fp  {resolved.memory.descriptor_fingerprint()}")
+        typer.echo(f"memory policy fp      {resolved.memory.policy_fingerprint()}")
+        typer.echo(f"memory surface fp     {resolved_memory.surface.fingerprint()}")
     typer.echo("OK")
 
 

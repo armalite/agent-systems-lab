@@ -243,11 +243,11 @@ def test_no_absolute_paths_leak_into_normalized_evidence(external_run: ExternalR
     assert str(Path.home()) not in blob
 
 
-def test_schema_versions_are_1_3_0(external_run: ExternalRun) -> None:
+def test_schema_versions_are_1_4_0(external_run: ExternalRun) -> None:
     _, rows, _, _ = external_run
-    assert TRACE_SCHEMA_VERSION == RESULT_SCHEMA_VERSION == "1.3.0"
-    assert all(r.trace_schema_version == "1.3.0" for r in rows)
-    assert all(r.result_schema_version == "1.3.0" for r in rows)
+    assert TRACE_SCHEMA_VERSION == RESULT_SCHEMA_VERSION == "1.4.0"
+    assert all(r.trace_schema_version == "1.4.0" for r in rows)
+    assert all(r.result_schema_version == "1.4.0" for r in rows)
 
 
 def test_parquet_round_trips_workspace_fields(external_run: ExternalRun) -> None:

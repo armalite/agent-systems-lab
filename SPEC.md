@@ -1,12 +1,12 @@
 # Agent Systems Lab - Research & Build Specification
 
 **Status:** Active research specification  
-**Version:** 2.8  
+**Version:** 2.11  
 **Repository:** `agent-systems-lab`
 
-### Version 2.8 roadmap clarification
+### Version 2.11 controlled-memory identity semantics
 
-Version 2.8 preserves the existing research direction, experimental contracts, novelty gate, Phase 0 result, and v2.7 provenance model. It corrects the post-calibration roadmap so the novelty gate follows completion of the calibrated initial instrument rather than being blocked by speculative analysis-ergonomics work.
+Version 2.11 preserves the calibrated M0-M4 instrument, Phase 0 result, Research Gate 1 boundary, and v2.10 M5 evidence semantics. It freezes the remaining identity contracts exposed by the concrete M5 implementation: corpus-level memory identity/versioning, normative policy-definition fingerprinting, backwards-compatible no-memory config identity, the minimal lifecycle/policy primitive, and the exact v1 model-visible presentation bytes.
 
 Earlier versions established:
 
@@ -84,6 +84,41 @@ Version 2.8 additionally clarifies:
 - the novelty review, calibration evidence, and selected research question determine what Milestone 5 should be;
 - a future Milestone 5 may be a small apparatus capability, a pilot, or a frontier experiment, depending on what the selected question actually requires;
 - no memory capability, generic analysis layer, or other future platform feature is authorized merely because it appears useful in advance.
+
+Version 2.9 additionally clarifies:
+
+- Research Gate 1 has completed outside the public apparatus repository and authorizes **Milestone 5 - Controlled Procedural-Memory Surface** as the next generic apparatus extension;
+- M5 is not the claim-bearing frontier experiment and does not publish or encode the private research hypothesis;
+- memory becomes a separately declared experimental surface with a canonical descriptor, a distinct model-visible memory surface, deterministic fingerprints, and exact raw-trace/provider-request evidence;
+- memory provenance/dependency metadata is experimental evidence but is **not model-visible by default**; hidden lifecycle metadata must never leak condition labels, stale/changed annotations, or research intent into the provider request;
+- external memory materials referenced by an experiment are now behaviorally relevant inputs and must be content-bound by the resolved experiment/material fingerprints;
+- initial M5 memory selection should be deterministic and deliberately simple; no vector store, embedding retrieval, autonomous memory manager, self-healing loop, or generic skill platform is authorized;
+- trace/result schemas should advance from `1.3.0` to `1.4.0` when M5 memory evidence fields/events are implemented; historical artifacts remain immutable under their original schema versions;
+- the existing capability/environment `model_surface_fingerprint` remains a capability-surface identity and must not silently absorb per-run memory content; memory receives its own model-visible surface fingerprint, while the exact provider request remains final evidence of everything the model saw.
+
+Version 2.10 additionally clarifies:
+
+- M5 uses exactly one initial memory placement mode: a **separate leading user-role memory message** inserted by the runner before the task/conversation messages for every model turn in a memory-enabled run;
+- the canonical memory message wrapper is neutral, fixed, declared by a versioned presentation identity, and contains only rendered procedural memory content; it must not include lifecycle, condition, dependency, old/new-version, validation, or research-intent labels;
+- memory must not be merged into `system_instructions`, because the existing capability `model_surface_fingerprint` includes system instructions and must remain independent of per-run memory;
+- M5 memory selection is **per run and invariant across turns**; the same resolved memory surface is replayed on every model turn in that run unless a later SPEC revision explicitly introduces turn-varying memory as a new experimental variable;
+- `memory_descriptor_fingerprint` covers the complete declared memory corpus, including all model-visible content and all hidden provenance/dependency/lifecycle fields;
+- `memory_policy_fingerprint` identifies a **versioned policy definition plus canonical parameters**, not the observed selection outcome;
+- no-memory and declared-but-empty memory are distinct states: no memory configured yields null memory fingerprints/count, while configured memory whose policy selects zero entries yields real descriptor/policy fingerprints, a canonical empty `MemorySurface` fingerprint, and `memory_entry_count = 0`;
+- the canonical empty memory surface contains **no model-visible memory message**. Its fingerprint represents the resolved empty surface as evidence, but the provider request remains byte-equivalent to a no-memory request with respect to memory content/placement;
+- M5 trace/result schema versions remain `1.4.0`; these clarifications resolve semantics before implementation and do not require a further schema bump.
+
+Version 2.11 additionally clarifies:
+
+- a declared memory corpus has an explicit stable `id` and `version`; both are part of `MemoryDescriptor` identity alongside the ordered declared entries, so renaming or re-versioning the corpus intentionally produces a new `memory_descriptor_fingerprint` even when the entries are otherwise byte-identical;
+- `memory_policy_fingerprint` covers the stable policy id, policy version, canonical parameter names/schema, **normative policy specification text**, and canonical declared parameter values; it excludes the observed selection outcome;
+- normative policy specification text is part of experimental identity, analogous to versioned metric-definition specifications; source comments, README prose, docstrings, and other non-normative documentation are not;
+- when memory is configured, the resolved experiment/config identity includes its declared descriptor and policy identities;
+- when no `memory:` block is declared, memory contributes **nothing** to canonical config identity; an absent memory block is not serialized as `null`, `{}`, or another M5 sentinel;
+- therefore, resolving a pre-M5/no-memory experiment under M5+ code must preserve its pre-M5 `config_fingerprint` when all other experimental inputs are unchanged;
+- M5 lifecycle state is exactly `active | inactive`, and the initial policy selects active entries in declared order without embedding reasons for inactivity or private-study semantics;
+- the exact initial presentation is `leading_user_memory_v1` with canonical bytes `Notes:\n\n<entry 1>[\n\n<entry 2>...]`, verbatim entry whitespace, and no trailing newline;
+- these clarifications do not alter the already-authorized `1.4.0` trace/result schema target and require no historical migration.
 
 
 ---
@@ -290,6 +325,8 @@ Coding agents must **not automatically implement the next research phase merely 
 
 After calibration, future experiment implementation requires an explicitly selected research question that has passed this gate.
 
+**Current state:** Research Gate 1 has completed in the private research workspace with a `NARROW / PROCEED` decision. The private novelty artifact and exact research question are intentionally not duplicated here. The gate authorizes only the generic M5 apparatus capability defined below. It does **not** authorize a claim-bearing experiment, a public reproduction of the private novelty review, or speculative expansion beyond M5.
+
 ---
 
 ## 4. Initial Research Programmes
@@ -349,11 +386,13 @@ Key question:
 
 > **When does remembered experience become technical debt for an agent?**
 
-#### 4.3.1 Design constraints for any future memory experiment
+#### 4.3.1 Design constraints for memory-enabled experiments
 
-This subsection is **not authorization to build a memory subsystem or to select memory as the next research question**. It records methodological constraints now so that implementation convenience cannot silently determine a later experiment. Any substantial memory work still requires an explicitly selected question that passes the novelty gate in Section 3.
+Earlier versions recorded these constraints without authorizing implementation. Research Gate 1 has now selected a private frontier question that requires a **minimal controlled procedural-memory apparatus surface**, so these constraints are active for M5.
 
-If persistent memory later becomes experimental material:
+They still do **not** authorize a generic memory product, autonomous memory manager, or claim-bearing experiment. M5 exists only to make memory a controlled, fingerprinted and auditable experimental surface.
+
+If persistent memory becomes experimental material:
 
 **Memory is a model-visible surface.**
 
@@ -404,6 +443,272 @@ Do not freeze a detailed memory schema now. The exact fields belong to the novel
 Policies such as retain-all, wipe-all, recency-based retention, provenance-scoped invalidation, and provenance-scoped revalidation can themselves change behaviour. If compared, they must be expressible as declarative experiment conditions with the rest of the harness held constant as far as the hypothesis permits.
 
 Measure policy cost as well as behavioural outcome. Relevant cost may include additional provider requests, tool calls, input/output tokens, latency, or other reproducible resource usage.
+
+#### 4.3.2 M5 controlled-memory contract
+
+M5 should introduce the smallest public apparatus primitives required to make procedural memory experimentally controllable without deciding the private study design inside the harness.
+
+The public apparatus should distinguish at least three objects:
+
+1. **MemoryDescriptor** - canonical declared memory material plus non-model-visible provenance/dependency/lifecycle metadata needed to reproduce the experimental input;
+2. **MemorySurface** - the exact ordered memory content and placement presented to the model for a run/turn;
+3. **MemoryPolicyDescriptor** - the canonical deterministic configuration that decides which declared entries are active/presented, without embedding research-condition labels in model-visible text.
+
+These are distinct from the existing capability/environment surfaces:
+
+```text
+EnvironmentDescriptor
+        ↓
+capability Model Surface
+        ↓
+Provider Surface
+        ┐
+        ├── Exact Provider Request
+        │
+MemoryDescriptor
+        ↓
+Memory Policy
+        ↓
+model-visible Memory Surface
+        ┘
+```
+
+The existing `model_surface_fingerprint` continues to identify the canonical capability/tool surface. Memory content must **not** be silently folded into that fingerprint, because future experiments need to tell whether the capability surface changed, the memory surface changed, or both.
+
+At minimum, a controlled memory entry should be able to represent:
+
+```text
+memory_id
+model_visible_content
+origin_type
+source_trace_ids
+derivation_identity
+learned_under_environment_fingerprint
+learned_under_model_surface_fingerprint
+capability_dependencies
+lifecycle_state
+```
+
+Exact field names may differ if the implementation can preserve the same evidence semantics.
+
+`origin_type` must distinguish, at minimum where applicable:
+
+```text
+trace_derived
+synthetic_control
+hand_authored_control
+transformed
+```
+
+For naturally acquired/learned procedural memory, the source evidence and transformation/derivation must be reproducible. M5 does not require a generic automatic memory extractor; a later study may supply precomputed trace-derived memory as external experimental material if its derivation is independently reproducible.
+
+**Hidden provenance is not prompt content.**
+
+Fields such as:
+
+- source trace IDs;
+- capability dependencies;
+- old/new surface fingerprints;
+- lifecycle state;
+- validation status;
+- condition identity;
+- research rationale;
+
+must remain harness-visible metadata unless a later pre-registered experiment explicitly chooses to expose them. In particular, strings such as `stale`, `changed`, `invalid`, `revalidate`, policy names, experiment labels, or V1/V2 condition labels must not reach the model merely because the harness needs them operationally.
+
+**Initial lifecycle primitive and policy are deliberately minimal.**
+
+For M5, the declared lifecycle state is exactly:
+
+```text
+active
+inactive
+```
+
+These values express presentation eligibility only. They do not encode why an entry is active/inactive and must not be expanded into `stale`, `valid`, `invalid`, `changed`, `revalidated`, or other private-study semantics without a later SPEC revision.
+
+The initial deterministic policy semantics are:
+
+> Select every declared entry whose `lifecycle_state` is `active`, preserving declared corpus order.
+
+The policy has no task-, model-, tool-space-, turn-, score-, similarity-, or run-observation-dependent behaviour.
+
+**Initial retrieval should be deliberately simple.**
+
+M5 supports one deterministic retrieval/presentation path sufficient for controlled research: resolve the active entries once at run start from the declared corpus and versioned policy, preserve their declared stable order, and keep that resolved active set **invariant across all model turns in the run**.
+
+Turn-varying retrieval, ranking, embedding similarity, recency scoring, autonomous retrieval queries, adaptive memory selection, or memory writes during the task are separate experimental variables and are not part of M5.
+
+**Initial model-visible placement is fixed.**
+
+For M5, when one or more memory entries are active, the runner renders exactly one **separate leading user-role memory message** before the task/conversation messages on every model turn.
+
+The memory message must:
+
+- use a neutral, versioned presentation template;
+- contain only the ordered rendered procedural memory content plus neutral separators/wrapper text;
+- avoid memory IDs unless a later experiment explicitly makes them model-visible;
+- avoid lifecycle/condition/dependency/version/validation/research-intent labels;
+- remain byte-stable for the same resolved MemorySurface.
+
+Memory must **not** be appended/prepended to `system_instructions`. The existing capability `ModelSurface` includes system instructions and its fingerprint must remain a capability/tool-surface identity independent of per-run memory.
+
+The initial presentation identity is:
+
+```text
+leading_user_memory_v1
+```
+
+Its canonical rendered bytes for one or more active entries are:
+
+```text
+Notes:\n\n<entry 1>[\n\n<entry 2>...]
+```
+
+That means:
+
+- header exactly `Notes:`;
+- exactly two LF characters after the header;
+- entries separated by exactly two LF characters;
+- declared `model_visible_content` preserved verbatim, including leading/trailing/internal whitespace;
+- no additional trailing newline after the final entry;
+- zero active entries render no message at all.
+
+Changing the header, wrapper, separators, whitespace-normalization rules, order, placement, role, or other model-visible presentation semantics requires a new presentation version and changes the `memory_surface_fingerprint`.
+
+The exact rendered memory message is model-visible experimental material and must be fingerprinted and visible in the exact provider request.
+
+**Fingerprint semantics are explicit.**
+
+`memory_descriptor_fingerprint` identifies the **complete declared memory experimental input**. A declared memory corpus must carry a stable corpus `id` and corpus `version`; both are part of descriptor identity together with the ordered declared entries.
+
+Its canonical serialization therefore includes:
+
+```text
+memory_set_id
+memory_set_version
+ordered entries:
+    memory_id
+    model_visible_content
+    origin_type
+    source_trace_ids
+    derivation_identity
+    learned_under_environment_fingerprint
+    learned_under_model_surface_fingerprint
+    capability_dependencies
+    lifecycle_state
+```
+
+Changing the corpus id, corpus version, declared order, or any declared entry field changes the descriptor fingerprint, even when the final rendered memory surface remains unchanged. Filesystem location is excluded.
+
+This intentionally treats an explicit corpus rename/re-version as a different declared experimental input. Do not rely on filenames as corpus identity.
+
+`memory_policy_fingerprint` identifies the **versioned normative policy definition plus canonical policy parameters/configuration**. Its canonical identity includes:
+
+```text
+policy_id
+policy_version
+canonical parameter names/schema
+normative policy specification text
+canonical declared parameter values
+```
+
+The normative specification text is the experiment-facing statement of policy semantics, analogous to the specification text already bound by versioned metric-definition sets. It is distinct from source comments, README prose, docstrings, or other non-normative documentation.
+
+The policy fingerprint does **not** encode the observed selection outcome, selected entry IDs, entry count, task, model, tool-space, or turn. If normative policy semantics change, create a new policy version/definition rather than editing an existing released definition in place.
+
+`memory_surface_fingerprint` identifies only the **resolved model-visible memory surface**, including ordered active content, neutral wrapper/separators, presentation identity/version, and placement semantics. Hidden provenance/dependency/lifecycle metadata is excluded unless it changes which entries are active or alters rendered model-visible content.
+
+The observed active entry IDs/order remain raw trace evidence and are not folded into the policy fingerprint merely because a particular run produced them.
+
+**No-memory and empty-memory semantics are distinct.**
+
+1. **No memory configured**
+   - no `memory:` block;
+   - no memory descriptor or policy exists;
+   - no model-visible memory message is inserted;
+   - no `MEMORY_SURFACE_RESOLVED` event is required;
+   - normalized fields are null for descriptor, policy, surface fingerprint, and entry count.
+
+2. **Memory configured, policy selects zero entries**
+   - descriptor and policy remain real experimental inputs with non-null fingerprints;
+   - the resolved active set is empty;
+   - `memory_entry_count = 0`;
+   - a canonical empty `MemorySurface` fingerprint is emitted;
+   - a `MEMORY_SURFACE_RESOLVED` event records the empty active set and fingerprints;
+   - **no model-visible memory message is inserted into the provider request**.
+
+The empty MemorySurface fingerprint is evidence that memory resolution occurred and produced an empty surface; it is not evidence that the model saw an empty wrapper/message.
+
+Because the provider sees no memory message in both states, the exact provider request may be byte-equivalent with respect to memory placement/content. The descriptor/policy/surface evidence distinguishes the experimental states outside the model-visible request.
+
+**Memory participation in resolved experiment identity is backwards-compatible.**
+
+When a `memory:` block is declared, the resolved experiment/config identity must bind the declared memory experimental inputs through their canonical descriptor and policy identities.
+
+When no `memory:` block is declared, memory is **absent from canonical config identity**. Do not encode an absent memory block as `null`, `{}`, an empty descriptor, or another M5 sentinel merely because the implementation now understands memory.
+
+This preserves historical/current no-memory experiment identity: if all pre-existing experimental inputs are unchanged, resolving the experiment under M5+ code must yield the same `config_fingerprint` it yielded before M5.
+
+Configured-but-empty memory remains different because a real descriptor and policy are declared, so their identities participate in the config fingerprint even though the provider receives no memory message.
+
+**External memory material is now fingerprint-bound.**
+
+When an experiment references memory entries/material outside the apparatus repository, the resolved experiment must bind the exact material content through a deterministic content fingerprint. Moving the same bytes to another filesystem location must not change the fingerprint; changing relevant memory content or hidden provenance that controls selection/lifecycle must change the appropriate descriptor/policy fingerprint.
+
+A generic recursive hash of unrelated `materials/` content is not required. Bind the files actually declared as memory experimental inputs.
+
+**Lifecycle state is controllable input, not autonomous behaviour.**
+
+M5 must allow a declared memory corpus to express whether entries are currently eligible for presentation, while preserving enough provenance to explain how that state was produced. It need not implement an autonomous revalidation algorithm or mutate memory during a task run.
+
+If a later private study performs a validation/revalidation phase, that phase may produce a frozen derived memory descriptor for the final evaluation. Its source execution/artifact fingerprints must be preserved so the final memory state is reproducible.
+
+**Memory-surface evidence hierarchy**
+
+Resolve the memory descriptor/policy/active surface once per run. Preserve enough raw evidence to reconstruct:
+
+```text
+declared memory descriptor
+        ↓
+versioned policy / lifecycle resolution
+        ↓
+ordered active entry IDs
+        ↓
+exact model-visible rendered memory surface
+        ↓
+memory_surface_fingerprint
+        ↓
+same resolved surface replayed on each model turn
+        ↓
+exact provider request per turn
+```
+
+The exact provider request remains authoritative for what the model actually saw on each turn.
+
+M5 should add explicit trace evidence such as a `MEMORY_SURFACE_RESOLVED` event (or equivalently clear structured evidence) once after run-level memory resolution and **before the first model request**. The event must contain the resolved entry IDs/order, relevant descriptor/policy/surface fingerprints, presentation identity/version, entry count, and exact rendered memory content or an unambiguous lossless reference to content persisted with the execution.
+
+Subsequent model requests in the same run reuse that frozen MemorySurface. Each exact provider request still proves that the same model-visible memory message was actually presented. Do not emit a second selection/resolution decision on later turns unless a future SPEC revision introduces turn-varying memory.
+
+Normalized results may expose concise optional memory provenance fields useful for comparison, for example:
+
+```text
+memory_descriptor_fingerprint
+memory_policy_fingerprint
+memory_surface_fingerprint
+memory_entry_count
+```
+
+These normalized fields remain derived from raw evidence.
+
+Because M5 adds new trace/result evidence semantics, implementation should bump:
+
+```text
+trace_schema_version:  1.3.0 -> 1.4.0
+result_schema_version: 1.3.0 -> 1.4.0
+```
+
+Do not rewrite or migrate historical M0-M4 artifacts.
 
 ### 4.4 Provenance-aware memory
 
@@ -912,6 +1217,34 @@ metrics:
 
 Saved results must include the complete resolved experiment configuration.
 
+### 9.6 Procedural-memory definition
+
+Memory-enabled experiments must reference memory declaratively rather than constructing hidden prompt text inside provider adapters.
+
+A minimal conceptual form is:
+
+```yaml
+memory:
+  entries: <declared external or in-repo memory material carrying corpus id/version>
+  policy:
+    id: <versioned deterministic policy id>
+    parameters: <canonical parameters if any>
+  presentation: <versioned leading-user-memory presentation identity>
+```
+
+The referenced memory material must declare a stable corpus id and corpus version in addition to its ordered entries. Those corpus-level fields are part of `MemoryDescriptor` identity and are not inferred from the filename.
+
+The resolved experiment must preserve/fingerprint:
+
+- the declared memory material;
+- the memory policy/lifecycle configuration;
+- the model-visible rendered memory surface;
+- any external content files that materially determine those objects.
+
+Provider adapters should receive an already-resolved model-visible memory presentation rather than independently deciding which memories to retrieve or how to rank them.
+
+The initial M5 implementation may support a single deterministic presentation/retrieval mode. Additional modes are future experimental variables, not ergonomic features.
+
 ---
 
 ## 10. Synthetic MCP Environment
@@ -1017,21 +1350,20 @@ The raw provider-facing request should preserve the exact tool representation, s
 
 Provider-native continuation content that must be replayed verbatim (for example thinking/redacted-thinking blocks on providers that require this) should be preserved losslessly in the trace and round-tripped by the provider adapter without interpretation by the runner.
 
-For future memory research, the trace design should also be capable of recording:
+For M5 memory-enabled research, the trace must also be capable of recording the controlled memory evidence required by §4.3, including:
 
-- memory candidates;
-- memory writes;
-- retrieval queries;
-- exact retrieved memories in presented order;
-- retrieval/presentation policy identity or fingerprint;
+- declared memory descriptor identity/fingerprint;
+- exact active/retrieved memories in presented order;
+- deterministic retrieval/presentation policy identity or fingerprint;
 - memory provenance and derivation identity;
-- model-visible memory placement/presentation where not already reconstructible from the exact provider request;
-- memory invalidation/revalidation events;
+- capability-dependency/lifecycle metadata required to reproduce selection, while keeping that metadata non-model-visible by default;
+- exact rendered memory placement/presentation where not already reconstructible from the provider request;
+- memory lifecycle/validation events when such events occur outside the final task run;
 - incremental provider/tool/token/latency cost attributable to a memory policy where relevant.
 
 The exact persisted provider request remains authoritative for what memory the model actually saw.
 
-Do not implement the full memory subsystem initially.
+M5 must implement only the controlled memory surface required by §4.3.2, not a production memory subsystem.
 
 ### 12.1 Apparatus and external-workspace provenance
 
@@ -1680,7 +2012,7 @@ If these files do not make those answers clear, update the documentation.
 
 Milestones 0-4 establish and calibrate the **initial research instrument**. They are not a commitment to a fixed frontier-research roadmap.
 
-After Milestone 4, stop and pass through Research Gate 1 before defining another implementation milestone.
+Research Gate 1 was completed after Milestone 4 and, based on the selected private frontier question, has now defined the narrowly scoped M5 apparatus extension below.
 
 ### Milestone 0 - Repository foundation
 
@@ -1801,32 +2133,73 @@ Acceptance:
 
 The researcher can inspect both aggregate results and every individual regressed/recovered task, and can verify that metric definitions and model-visible surfaces were fixed before observing the real model results.
 
-### Research Gate 1 - Select first frontier question
+### Research Gate 1 - COMPLETE
 
-Immediately after Milestone 4 / successful Phase 0 calibration:
+Research Gate 1 was completed after successful M4 / Phase 0 calibration in the separate private research workspace.
 
-**Do not continue automatically into another implementation milestone.**
+Outcome:
 
-1. summarize calibration results;
-2. record observations;
-3. inspect unexpected behaviour;
-4. perform a current-literature novelty search;
-5. select, narrow, reframe, or stop the candidate frontier direction based on that review;
-6. write the novelty review and the resulting hypothesis or exploratory objective;
-7. identify the smallest additional apparatus capability, if any, required to test that question;
-8. only then define Milestone 5.
+```text
+NARROW / PROCEED
+```
 
-There is intentionally **no pre-written Milestone 5**.
+The exact novelty review, selected research question, hypothesis, closest-work analysis, and claim boundary remain private until deliberate disclosure/publication. The gate determined that the next public apparatus need is a controlled procedural-memory surface.
 
-The evidence and current literature determine Milestone 5.
+Passing the gate does **not** authorize the claim-bearing experiment. It authorizes only M5 apparatus work.
 
-A valid Milestone 5 might be:
+### Milestone 5 - Controlled Procedural-Memory Surface
 
-- a small generic apparatus extension required by the selected question;
-- a controlled pilot that validates a newly required experimental surface;
-- the first frontier experiment itself if the existing apparatus is already sufficient.
+Purpose:
 
-Do not assign a milestone number to infrastructure merely because it is convenient to build.
+> Make procedural memory a controlled, fingerprinted and auditable experimental surface without building a generic memory platform or encoding the private frontier experiment into public apparatus code.
+
+Deliver the smallest coherent implementation of §4.3.2, including:
+
+- a declarative controlled memory-entry/material model;
+- explicit origin/source/derivation provenance;
+- capability/environment lineage metadata sufficient for later dependency questions;
+- separate canonical `MemoryDescriptor` and model-visible `MemorySurface`;
+- deterministic memory descriptor/surface fingerprints;
+- a canonical `MemoryPolicyDescriptor` or equivalent deterministic policy/config identity;
+- one simple deterministic active-entry selection/retrieval path;
+- one explicit reproducible model-visible memory presentation path;
+- external memory-material loading from an experiment workspace with content binding/fingerprinting;
+- exact resolved memory evidence in raw traces before the corresponding model request;
+- exact provider-request preservation showing the final memory content seen by the model;
+- concise derived result fields for memory descriptor/policy/surface identity where useful;
+- trace/result schema version `1.4.0`;
+- offline fake-adapter coverage and contamination/leakage tests.
+
+Acceptance:
+
+1. the same declared memory material/policy produces stable fingerprints independent of filesystem location;
+2. changing model-visible memory content or order changes the memory-surface fingerprint;
+3. changing hidden provenance/lifecycle metadata that affects selection changes the appropriate descriptor/policy fingerprint without leaking that metadata into model-visible content;
+4. provenance-only metadata that does **not** affect model-visible presentation does not falsely change the model-visible memory-surface fingerprint;
+5. an explicit no-memory/empty-memory run is representable without provider-specific hacks;
+6. the runner, not the provider adapter, owns deterministic memory resolution/presentation;
+7. raw trace evidence records the once-per-run resolved active memory set, order, descriptor/policy/surface fingerprints, and presentation identity before the first model request, and exact provider requests prove the frozen surface is replayed unchanged on later turns;
+8. the exact provider request confirms the actual memory text/placement seen by the model;
+9. no-memory produces null normalized memory evidence, while configured-but-empty memory produces descriptor/policy fingerprints, a canonical empty-surface fingerprint, and count `0` without inserting a model-visible memory message;
+10. external private memory material can be loaded and fingerprinted without copying apparatus code into the research workspace;
+11. condition labels, lifecycle labels, old/new environment labels, and research intent do not leak into model-visible memory unless explicitly included as experimental material;
+12. historical M0-M4 traces/results remain unchanged and readable under their original schema versions;
+13. the full offline test suite remains network-isolated and no paid/provider calls are required for M5 acceptance.
+
+M5 does **not** require:
+
+- vector storage;
+- embeddings;
+- semantic retrieval;
+- autonomous memory writing;
+- autonomous memory rewriting/repair;
+- self-healing agents;
+- generic compatibility probes;
+- a production memory service;
+- a general skill-management platform;
+- implementation of the private claim-bearing experiment.
+
+After M5, stop. The researcher must inspect the apparatus for leakage/contamination and then design/pilot/pre-register the private frontier experiment before any claim-bearing run.
 
 ### Deferred research-enablement backlog - not a gate
 
@@ -1894,9 +2267,9 @@ The lab is established when:
 11. an external coding/research agent can understand the project state from repo documentation;
 12. the researcher can understand the complete agent loop without relying on a general agent framework.
 
-At this point:
+At this point the calibrated initial instrument is complete.
 
-> **Stop building the platform. Enter Research Gate 1 and start selecting research questions.**
+Research Gate 1 has subsequently completed and authorized the narrowly scoped M5 apparatus extension above. This does not retroactively change the M0-M4 definition of done.
 
 ---
 

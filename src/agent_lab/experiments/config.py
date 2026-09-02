@@ -14,6 +14,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from agent_lab.environments.surface import fingerprint
 from agent_lab.evals.metrics import METRIC_DEFINITION_SETS
 from agent_lab.experiments.tasks import TaskSet, load_task_set
+from agent_lab.memory.descriptor import load_memory_descriptor
+from agent_lab.memory.policy import MEMORY_POLICIES, build_policy
+from agent_lab.memory.presentation import MEMORY_PRESENTATIONS, build_presentation
+from agent_lab.memory.resolve import DeclaredMemory
 from agent_lab.models.provider import PAID_PROVIDERS
 from agent_lab.synthetic.toolspaces import TOOL_SPACES
 
@@ -64,6 +68,42 @@ class CostControls(BaseModel):
     max_provider_requests: int = Field(ge=1)
 
 
+class MemoryPolicySpec(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: str
+    parameters: dict[str, Any] = Field(default_factory=dict)
+
+
+class MemorySpec(BaseModel):
+    """Declared procedural memory (`SPEC.md` s9.6, s4.3.2).
+
+    Memory is referenced declaratively, never constructed as hidden prompt text inside an
+    adapter. `entries` is a path to the declared material, resolved relative to the experiment
+    directory exactly like `task_set`, so an experiment in a research workspace can bind its own
+    private material without copying apparatus code.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    entries: str
+    policy: MemoryPolicySpec
+    presentation: str
+
+    def model_post_init(self, _context: Any) -> None:
+        if self.policy.id not in MEMORY_POLICIES:
+            raise ValueError(
+                f"unknown memory policy {self.policy.id!r}; known: {sorted(MEMORY_POLICIES)}"
+            )
+        if self.presentation not in MEMORY_PRESENTATIONS:
+            raise ValueError(
+                f"unknown memory presentation {self.presentation!r}; "
+                f"known: {sorted(MEMORY_PRESENTATIONS)}"
+            )
+        # Rejects unknown parameters at config-validation time rather than at run time.
+        build_policy(self.policy.id, self.policy.parameters)
+
+
 class Limits(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -83,6 +123,10 @@ class ExperimentConfig(BaseModel):
     repetitions: int = Field(ge=1)
     controls: Controls
     metric_definition_set: str
+    memory: MemorySpec | None = None
+    """Absent means *no memory configured*, which is a distinct experimental state from a
+    declared corpus that resolves to zero entries (`SPEC.md` s4.3.2, v2.10)."""
+
     limits: Limits = Field(default_factory=Limits)
     cost_controls: CostControls | None = None
 
@@ -124,15 +168,30 @@ class ExperimentConfig(BaseModel):
                 f"{self.metric_definition_set!r}; known: {sorted(METRIC_DEFINITION_SETS)}"
             )
 
-    def fingerprint(self, task_set_fingerprint: str, script_set_fingerprint: str) -> str:
-        """Hash of the fully resolved configuration, including referenced content."""
-        return fingerprint(
-            {
-                "config": self.model_dump(mode="json"),
-                "task_set_fingerprint": task_set_fingerprint,
-                "script_set_fingerprint": script_set_fingerprint,
-            }
-        )
+    def fingerprint(
+        self,
+        task_set_fingerprint: str,
+        script_set_fingerprint: str,
+        memory_fingerprints: dict[str, str] | None = None,
+    ) -> str:
+        """Hash of the fully resolved configuration, including referenced content.
+
+        When no memory is configured the memory key is dropped entirely rather than serialized
+        as null, so a pre-M5 experiment resolves to exactly the fingerprint it always had. That
+        keeps historical rows directly comparable with a re-execution of the same definition;
+        declaring memory is what changes an experiment's identity.
+        """
+        config = self.model_dump(mode="json")
+        payload: dict[str, Any] = {
+            "config": config,
+            "task_set_fingerprint": task_set_fingerprint,
+            "script_set_fingerprint": script_set_fingerprint,
+        }
+        if self.memory is None:
+            config.pop("memory", None)
+        else:
+            payload.update(memory_fingerprints or {})
+        return fingerprint(payload)
 
 
 class ResolvedExperiment(BaseModel):
@@ -146,6 +205,8 @@ class ResolvedExperiment(BaseModel):
     config_fingerprint: str
     task_set_fingerprint: str
     script_set_fingerprint: str
+    memory: DeclaredMemory | None = None
+    """Declared but unresolved. Selection and rendering belong to the runner, once per run."""
 
     def selected_tasks(self) -> tuple[Any, ...]:
         """Apply the cost-control task cap deterministically, in declared order."""
@@ -170,11 +231,24 @@ def load_experiment(path: Path) -> ResolvedExperiment:
         script_fp = load_script_set(directory / config.adapter.script_set).fingerprint()
     else:
         script_fp = fingerprint(None)
+
+    memory: DeclaredMemory | None = None
+    memory_fps: dict[str, str] | None = None
+    if config.memory is not None:
+        # External material is bound by content, not by path (`SPEC.md` s4.3.2).
+        memory = DeclaredMemory(
+            descriptor=load_memory_descriptor(directory / config.memory.entries),
+            policy=build_policy(config.memory.policy.id, config.memory.policy.parameters),
+            presentation=build_presentation(config.memory.presentation),
+        )
+        memory_fps = memory.fingerprints()
+
     return ResolvedExperiment(
         config=config,
         task_set=task_set,
         directory=directory,
-        config_fingerprint=config.fingerprint(task_fp, script_fp),
+        config_fingerprint=config.fingerprint(task_fp, script_fp, memory_fps),
         task_set_fingerprint=task_fp,
         script_set_fingerprint=script_fp,
+        memory=memory,
     )

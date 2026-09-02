@@ -28,8 +28,8 @@ def execution(tmp_path_factory: pytest.TempPathFactory) -> Execution:
 
 
 def test_schema_versions_were_bumped() -> None:
-    assert TRACE_SCHEMA_VERSION == "1.3.0"
-    assert RESULT_SCHEMA_VERSION == "1.3.0"
+    assert TRACE_SCHEMA_VERSION == "1.4.0"
+    assert RESULT_SCHEMA_VERSION == "1.4.0"
 
 
 def test_provenance_enters_the_raw_trace_first(execution: Execution) -> None:

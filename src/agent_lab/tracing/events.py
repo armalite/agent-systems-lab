@@ -12,7 +12,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-TRACE_SCHEMA_VERSION = "1.3.0"
+TRACE_SCHEMA_VERSION = "1.4.0"
 """1.1.0 added the `provider` layer and the provider-boundary events (Milestone 3).
 1.2.0 adds source-provenance and execution-schedule fields to the `RUN_STARTED` payload
 (`schedule_index`, `task_index`, `source_commit_sha`, `source_tree_dirty`), from which the
@@ -22,7 +22,10 @@ normalized row derives them.
 payload, and narrows `source_*` to the apparatus source tree only - resolved from the apparatus
 install rather than the
 process working directory. Traces written under 1.0.0/1.1.0 remain readable; the context
-field added in 1.1.0 defaults to empty."""
+field added in 1.1.0 defaults to empty.
+1.4.0 adds the `MEMORY_SURFACE_RESOLVED` event (Milestone 5), emitted once per run before the
+first model request when - and only when - an experiment declares memory. Traces written under
+earlier versions remain readable and are simply traces of runs with no memory configured."""
 
 Layer = Literal["harness", "model", "mcp", "tool", "provider", "evaluator"]
 
@@ -35,6 +38,7 @@ TOOL_CALL_EXECUTED = "TOOL_CALL_EXECUTED"
 TOOL_CALL_FAILED = "TOOL_CALL_FAILED"
 TOOL_RESULT_RETURNED = "TOOL_RESULT_RETURNED"
 PROVIDER_SURFACE_PREPARED = "PROVIDER_SURFACE_PREPARED"
+MEMORY_SURFACE_RESOLVED = "MEMORY_SURFACE_RESOLVED"
 PROVIDER_ERROR = "PROVIDER_ERROR"
 RUN_COMPLETED = "RUN_COMPLETED"
 EVALUATION_COMPLETED = "EVALUATION_COMPLETED"

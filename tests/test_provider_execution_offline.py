@@ -204,8 +204,8 @@ def test_results_still_re_derive_from_the_persisted_traces(execution: Execution)
 
 def test_schema_versions_are_stamped(execution: Execution) -> None:
     paths, rows = execution
-    assert all(row.result_schema_version == RESULT_SCHEMA_VERSION == "1.3.0" for row in rows)
-    assert all(row.trace_schema_version == "1.3.0" for row in rows)
+    assert all(row.result_schema_version == RESULT_SCHEMA_VERSION == "1.4.0" for row in rows)
+    assert all(row.trace_schema_version == "1.4.0" for row in rows)
     manifest = json.loads(paths.manifest.read_text())
     assert manifest["adapter_kind"] == "anthropic"
     assert manifest["paid_execution_authorized"] is True

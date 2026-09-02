@@ -95,24 +95,41 @@ and `research/experiment-log.md` for the outcome.
 | M2 - core experiment harness | ✅ complete |
 | M3 - first real provider adapter | ✅ complete |
 | M4 - Phase 0 calibration experiment | ✅ complete |
-| **Research Gate 1 - select first frontier question** | ⬅ **next stage** |
-| M5 | **intentionally undefined** until the gate completes |
+| Research Gate 1 - select first frontier question | ✅ complete |
+| M5 - controlled procedural-memory surface | ✅ complete |
 
-**Active research question:** none. Phase 0 is *calibration only* - a positive control proving
-the instrument can detect a known effect. It is explicitly not the intended contribution.
+**Research Gate 1 is complete.** The novelty review, the selected question, and its claim
+boundary are held outside this repository until deliberate disclosure. What the gate authorized
+here is **apparatus only**: Milestone 5, a controlled procedural-memory surface. Passing a gate
+does not authorize a claim-bearing experiment, and none is defined here.
 
-**Mandatory stop in force** (`SPEC.md` s16). After Phase 0 the lab does **not** proceed to a
-matrix of tool-count, naming, description, schema, ordering, or multi-model experiments. The
-novelty gate (`SPEC.md` s3) must be invoked and a frontier question explicitly selected before any
-further research programme is implemented.
+**Milestone 5 makes memory an experimental surface rather than hidden storage** (`SPEC.md`
+s4.3.2). Memory is declared material, resolved once per run by the runner, and recorded as
+evidence. It is *not* a memory subsystem: there is no store, no retrieval index, no embeddings,
+no ranking, no writing during a task, and no autonomous behaviour of any kind. Three objects are
+kept deliberately separate, so a later experiment can tell which one changed:
 
-**The calibrated instrument exists. The next step is choosing what to point it at, not extending
-it.** Milestones 0-4 built and calibrated it; Research Gate 1 follows immediately. There is
-deliberately no pre-written Milestone 5 - the novelty review, the calibration evidence, and the
-selected question determine what it should be. Further analysis ergonomics (DuckDB querying, run
-inspection, regression extraction, condition comparison) remain a **deferred research-enablement
-backlog**, promoted only when an active research question creates a concrete need. They are not a
-prerequisite for the gate.
+| Object | What it identifies |
+|---|---|
+| `MemoryDescriptor` | the complete declared corpus, hidden provenance included |
+| `MemoryPolicy` | the versioned deterministic rule selecting active entries |
+| `MemorySurface` | the exact ordered content and placement the model actually sees |
+
+Each has its own fingerprint. The capability `model_surface_fingerprint` is untouched by memory,
+because a future experiment must be able to distinguish a changed tool surface from changed
+memory. Hidden provenance - source traces, capability dependencies, lifecycle state, learned-under
+fingerprints - is harness evidence and never reaches a provider request; that is audited against
+the *recorded request body*, not the code that builds it. No experiment shipped in this
+repository declares memory, and a test enforces that.
+
+**Active research question:** none is published here. Phase 0 remains *calibration only* - a
+positive control proving the instrument can detect a known effect, explicitly not the intended
+contribution.
+
+**The instrument is calibrated and the memory surface is controlled. Neither is a finding.**
+Further analysis ergonomics (DuckDB querying, run inspection, regression extraction, condition
+comparison) remain a **deferred research-enablement backlog**, promoted only when an active
+research question creates a concrete need.
 
 ## Installation
 
@@ -221,15 +238,32 @@ flowchart TB
     PS -->|"adds the per-turn conversation/messages"| REQ
     REQ ==> TRACE
 
+    MD["MemoryDescriptor<br/>declared corpus, hidden provenance included"]
+    POL["Memory Policy<br/>versioned, deterministic, per run"]
+    MSURF["Model-visible Memory Surface<br/>ordered content, wrapper, placement"]
+
+    MD --> POL
+    POL -->|"drops provenance, lifecycle, dependencies<br/>hidden metadata is never prompt content"| MSURF
+    MSURF -->|"one leading user message, frozen for the run"| REQ
+
     DESC -.-> F1["environment_fingerprint"]
     MS -.-> F2["model_surface_fingerprint"]
     PS -.-> F3["provider_surface_fingerprint"]
+    MD -.-> F4["memory_descriptor_fingerprint"]
+    POL -.-> F5["memory_policy_fingerprint"]
+    MSURF -.-> F6["memory_surface_fingerprint"]
 ```
 
-The three fingerprints are **comparison aids**: they answer "did this surface change between
-conditions or runs?". The exact provider request is **evidence**: it is preserved verbatim for
-every turn, and carries its own per-turn hash. Confusing the two would be a methodological error,
-so they are deliberately named and stored apart.
+Declared memory is a **separate chain that joins only at the request** (`SPEC.md` s4.3.2). It is
+never merged into the system instructions, so `model_surface_fingerprint` stays a capability
+identity and a later experiment can tell a changed tool surface apart from changed memory. When
+no memory is declared, nothing in this branch exists and the request is exactly what it was
+before Milestone 5.
+
+The fingerprints are **comparison aids**: they answer "did this surface change between conditions
+or runs?". The exact provider request is **evidence**: it is preserved verbatim for every turn,
+and carries its own per-turn hash. Confusing the two would be a methodological error, so they are
+deliberately named and stored apart.
 
 ## Results and traces
 
@@ -239,7 +273,8 @@ is a reproducible artifact, not source):
 ```text
 results/<experiment_id>/<execution_id>/
   manifest.json                    versions, git SHA + dirty flag, lockfile hash, fingerprints
-  resolved_config.json             the fully resolved config and the frozen task set
+  resolved_config.json             the fully resolved config, the frozen task set, and the
+                                   declared memory corpus when an experiment declares one
   environments/<tool_space>.json   environment descriptor, model surface, and provider surface,
                                    each with its own fingerprint
   traces/<run_id>.jsonl            complete ordered raw trace, one file per run

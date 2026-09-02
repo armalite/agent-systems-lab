@@ -31,6 +31,7 @@ from agent_lab.evals.metrics import METRIC_DEFINITION_SETS
 from agent_lab.experiments.config import ResolvedExperiment
 from agent_lab.experiments.result import RESULT_SCHEMA_VERSION, ResultRow, derive_result
 from agent_lab.experiments.tasks import Task
+from agent_lab.memory.resolve import ResolvedMemory, resolve_memory
 from agent_lab.models.anthropic import AnthropicAdapter, exact_request_hash, redacted_request
 from agent_lab.models.base import Message, ModelAdapter, ModelRequest, ProviderSurface
 from agent_lab.models.fake import ScriptedAdapter, load_script_set
@@ -284,10 +285,18 @@ async def _run_single(
     max_steps: int,
     parameters: dict[str, Any],
     tool_space_id: str,
+    memory_message: str | None = None,
 ) -> None:
     available = frozenset(surface.tool_names())
     rendered_tools = adapter.render_tools(surface)
-    messages: list[Message] = [Message(role="user", content=task.prompt)]
+    # `SPEC.md` s4.3.2 (v2.10): memory is a separate leading user-role message, never merged
+    # into system instructions and never assembled inside a provider adapter. It stays at index
+    # 0 for the whole run, so every subsequent turn replays the identical frozen surface. With
+    # no memory the message list is exactly what it was before Milestone 5.
+    messages: list[Message] = []
+    if memory_message is not None:
+        messages.append(Message(role="user", content=memory_message))
+    messages.append(Message(role="user", content=task.prompt))
     final_text: str | None = None
     stop_reason = STOP_NO_ANSWER
 
@@ -582,6 +591,17 @@ async def run_experiment(
                                 ],
                             },
                         )
+                    # Resolved once per run, before the first model request, and frozen for
+                    # the rest of the run (`SPEC.md` s4.3.2). No memory configured emits no
+                    # event at all, which is what makes the two empty states distinguishable.
+                    resolved_memory: ResolvedMemory | None = None
+                    if resolved.memory is not None:
+                        resolved_memory = resolve_memory(resolved.memory)
+                        recorder.emit(
+                            ev.MEMORY_SURFACE_RESOLVED,
+                            "harness",
+                            resolved_memory.trace_payload(),
+                        )
                     await _run_single(
                         adapter=adapter,
                         client=condition.env.client,
@@ -591,6 +611,9 @@ async def run_experiment(
                         max_steps=config.controls.max_steps,
                         parameters=config.model.parameters,
                         tool_space_id=entry.tool_space_id,
+                        memory_message=(
+                            resolved_memory.rendered_message if resolved_memory else None
+                        ),
                     )
                     # Derived strictly from the events emitted above.
                     row = derive_result(
@@ -620,6 +643,16 @@ async def run_experiment(
                 "task_set_fingerprint": resolved.task_set_fingerprint,
                 "script_set_fingerprint": resolved.script_set_fingerprint,
                 "task_set": resolved.task_set.model_dump(mode="json"),
+                "memory": (
+                    {
+                        "descriptor": resolved.memory.descriptor.canonical_form(),
+                        "policy": resolved.memory.policy.canonical_form(),
+                        "presentation_id": resolved.memory.presentation.id,
+                        **resolved.memory.fingerprints(),
+                    }
+                    if resolved.memory is not None
+                    else None
+                ),
             },
             indent=2,
             ensure_ascii=False,
@@ -641,6 +674,7 @@ async def run_experiment(
                 "config_fingerprint": resolved.config_fingerprint,
                 "task_set_fingerprint": resolved.task_set_fingerprint,
                 "script_set_fingerprint": resolved.script_set_fingerprint,
+                **(resolved.memory.fingerprints() if resolved.memory is not None else {}),
                 **metric_set.provenance(),
                 "lockfile_hash": apparatus_lockfile_hash(),
                 **provenance,

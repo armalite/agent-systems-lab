@@ -97,7 +97,9 @@ evaluator output, and only then scale. Say the expected request count out loud b
 ## Traps specific to this project
 
 - Claude is fast at generating breadth; this repo punishes breadth. A large tool-sweep matrix,
-  extra conditions, or a speculative memory module are **regressions**, not progress.
+  extra conditions, or a speculative memory module are **regressions**, not progress. The M5
+  memory surface is deliberately one policy and one presentation; adding a second of either
+  "for completeness" is exactly this trap, not a gap to fill (`AGENTS.md` §4).
 - Do not "fix" surprising model behaviour before it is recorded in `research/observations.md`.
 - Do not create empty modules to match the target tree in `SPEC.md` §8.
 - Do not restate the spec into README/AGENTS/CLAUDE. Link to it.

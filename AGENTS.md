@@ -74,11 +74,14 @@ Rules:
 
 Do not build until a selected, gated experiment requires it:
 
-- persistent memory subsystems, memory provenance, revalidation or invalidation machinery.
-  If memory is ever introduced after the novelty gate, its content, retrieval/presentation
-  policy, and provenance become **model-visible experimental material** under the same evidence,
-  fingerprinting, and leakage discipline as any other model-visible surface (`SPEC.md` s4.3.1,
-  s6.14, s12). This is not authorization to build it;
+- persistent memory **subsystems**, revalidation or invalidation machinery. Milestone 5 built a
+  controlled memory *surface* (`agent_lab.memory`) and nothing more: declared material, one
+  versioned deterministic selection policy, one versioned model-visible presentation, resolved
+  once per run by the runner. Memory content, its selection/presentation policy, and its
+  provenance are **model-visible experimental material** under the same evidence, fingerprinting
+  and leakage discipline as any other model-visible surface (`SPEC.md` s4.3.1, s4.3.2, s6.14,
+  s12). Nothing beyond that surface is authorized: no store, no index, no embeddings, no ranked
+  or semantic retrieval, no turn-varying selection, no writing or rewriting during a run;
 - self-healing / autonomous repair of capability surfaces;
 - adaptive or learned capability-selection layers;
 - large benchmark matrices or multi-model sweeps;
@@ -215,8 +218,10 @@ If those answers are not clear from the repository, fixing the documentation is 
 
 *Keep this section accurate. It is the fastest answer to "what exists?" for a new agent.*
 
-**Current milestone:** Milestone 4 - Phase 0 calibration. **Complete.** A valid calibration was
-executed and analysed; the **mandatory stop** at `SPEC.md` s16 is now in force.
+**Current milestone:** Milestone 5 - Controlled Procedural-Memory Surface. **Complete.** The
+**mandatory stop** after M5 (`SPEC.md` s23) is now in force: the researcher must inspect the
+apparatus for leakage/contamination, then design, pilot and pre-register a frontier experiment
+before any claim-bearing run. No such experiment exists in this repository.
 
 **Implemented:** M0-M3 as before (project and tooling; deterministic synthetic MCP environment;
 the harness with runner-owned agent loop, tracing, deterministic derivation, versioned metrics and
@@ -224,7 +229,10 @@ Parquet; the Anthropic one-turn adapter with paid gate, request budget, exact pe
 requests and three-way surface fingerprinting). *M4* adds the expanded customer fixtures (20), the
 frozen 28-task Phase 0 set, the deterministic counterbalanced execution schedule, trace-derived
 source provenance, `agent_lab.analysis.phase0`, and the committed
-`research/preregistration/PHASE0.md`.
+`research/preregistration/PHASE0.md`. *M5* adds `agent_lab.memory` - declared memory material,
+one versioned deterministic selection policy, one versioned model-visible presentation, and their
+three separate fingerprints - plus the `MEMORY_SURFACE_RESOLVED` trace event, four normalized
+memory columns, and trace/result schema `1.4.0`.
 
 **Phase 0 outcome:** executed at commit `55030e4b` from a clean tree. Physical execution
 `20260901T113003Z` is the valid one (280/280 runs, 560 requests, ~$4.28); `20260901T103826Z` is
@@ -237,16 +245,24 @@ and never pooled. `SPEC.md` s16 criteria satisfied.
 **This is calibration, not a contribution.** It reproduces a known effect to validate the
 instrument. Do not describe it as a research finding.
 
-**Next stage: Research Gate 1** (`SPEC.md` §3, §23) - select the first frontier question. It
-follows Milestone 4 immediately; nothing else is scheduled before it.
+**Research Gate 1: complete.** Its outcome was `NARROW / PROCEED`. The novelty review, the
+selected question, the hypothesis, the closest-work analysis, and the claim boundary are held
+**outside this repository** until deliberate disclosure. Do not attempt to reconstruct,
+reverse-engineer, infer, or restate them here, and do not encode them into apparatus code,
+experiments, fixtures, tests, or documentation. What the gate authorized in public is M5 and
+nothing else. Passing a gate never authorizes a claim-bearing experiment.
 
-**There is intentionally no Milestone 5.** The novelty review, the calibration evidence, and the
-selected question determine what M5 should be. Do **not** build analysis ergonomics, memory, or any
-other apparatus capability merely because it looks useful - a current literature/novelty review
-determines the research direction, and the research direction determines the next milestone. Do not
-start the gate without an explicit researcher decision.
+**Memory scope discipline.** `agent_lab.memory` is a controlled experimental *surface*, not a
+memory subsystem. Still explicitly unauthorized (`SPEC.md` s4.3.2): vector storage, embeddings,
+semantic or ranked retrieval, recency scoring, turn-varying retrieval, autonomous memory writing
+or rewriting, self-healing, revalidation algorithms, compatibility probes, a memory service, and a
+generic skill-management platform. Additional selection policies and presentation modes are
+**future experimental variables**, not ergonomic gaps - add one only when a pre-registered
+experiment requires it, and never by editing an existing versioned definition in place.
 
-**Active research question:** none. No novelty gate has been run.
+**Active research question:** none is defined in this repository, and M5 is apparatus, not a
+finding. No experiment shipped here declares memory; `tests/test_memory_surface.py` enforces
+that.
 
 **Observations recorded:** O-001 to O-004 (model-visible leakage and real-provider behaviour) and
 O-005, O-006 (CLI disclosure before validity was known; operational cost of whole-execution
@@ -314,6 +330,22 @@ canonical statement and the section references below are the place to check the 
   model identity explicitly rather than inheriting provider defaults, and record them. Never send
   `temperature` to current Claude models - it is unsupported and rejected. Variance is controlled
   by repetitions (`SPEC.md` s18, v2.3).
+- **Memory is declared input, resolved by the runner, never assembled in an adapter**
+  (`SPEC.md` s4.3.2, s9.6). It enters as a separate leading user-role message and is never merged
+  into `system_instructions`, so the capability `model_surface_fingerprint` stays independent of
+  per-run memory. Selection is per run and invariant across turns. Hidden provenance - source
+  traces, derivation identity, capability dependencies, learned-under fingerprints, lifecycle
+  state - is harness evidence and must never reach a provider request. The descriptor fingerprint
+  covers the whole declared corpus; the policy fingerprint covers the versioned definition plus
+  its parameters, never the selection outcome; the surface fingerprint covers only what the model
+  sees. **No memory configured** (null fields, no event) and **configured-but-empty** (real
+  descriptor/policy fingerprints, canonical empty-surface fingerprint, count `0`, no model-visible
+  message) are distinct recorded states and must not be collapsed.
+- **The leading-user memory message has not yet been exercised against a real provider.** M5 is
+  covered offline only. Two consecutive user-role messages are valid in the recorded request body
+  but have not been sent to the Anthropic API from this apparatus. Smoke-test one memory-enabled
+  task before any pre-registered memory run, and treat a provider-side rejection as an apparatus
+  finding to record, not a reason to quietly change the placement contract.
 - **Evidence authority is raw trace > normalized result row > aggregate summary** (`SPEC.md`
   s18). If a derived row disagrees with a valid trace, the trace wins and the derivation is the
   bug. Derived fields must be reproducible from the trace alone.

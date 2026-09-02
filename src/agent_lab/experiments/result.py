@@ -20,12 +20,14 @@ from agent_lab.experiments.tasks import Task
 from agent_lab.tracing import events as ev
 from agent_lab.tracing.events import TraceEvent
 
-RESULT_SCHEMA_VERSION = "1.3.0"
+RESULT_SCHEMA_VERSION = "1.4.0"
 """1.1.0 added provider-boundary fields (Milestone 3). 1.2.0 adds `schedule_index` and populates
 `source_commit_sha` / `source_tree_dirty`, all derived from the `RUN_STARTED` trace event rather
 than injected independently. 1.3.0 adds `workspace_commit_sha` / `workspace_tree_dirty`, narrows
-`source_*` to apparatus-only semantics, and makes `trace_path` execution-root-relative. Rows
-written under different result schema versions must not be compared as equivalent."""
+`source_*` to apparatus-only semantics, and makes `trace_path` execution-root-relative.
+1.4.0 adds the four memory identity fields, derived from `MEMORY_SURFACE_RESOLVED`. They are
+null together when no memory was configured. Rows written under different result schema
+versions must not be compared as equivalent."""
 
 
 class ToolCallRecord(BaseModel):
@@ -129,6 +131,20 @@ class ResultRow(BaseModel):
     output_tokens: int | None
     latency_ms: float | None
 
+    memory_descriptor_fingerprint: str | None = None
+    """Identity of the complete declared memory corpus, hidden provenance included. Null when
+    no memory was configured; never null merely because the surface resolved to empty
+    (`SPEC.md` s4.3.2, v2.10)."""
+
+    memory_policy_fingerprint: str | None = None
+    """Identity of the versioned policy definition and its parameters - not of the outcome."""
+
+    memory_surface_fingerprint: str | None = None
+    """Identity of the model-visible memory surface only. A configured corpus that selects
+    nothing still has one: the canonical empty surface."""
+
+    memory_entry_count: int | None = None
+
     repetition: int
     schedule_index: int | None
     """Position in the frozen execution order, derived from the trace. Lets an analysis check
@@ -174,6 +190,10 @@ class _Extracted(BaseModel):
     provider_request_ids: tuple[str, ...]
     provider_stop_reason: str | None
     provider_error_kind: str | None
+    memory_descriptor_fingerprint: str | None
+    memory_policy_fingerprint: str | None
+    memory_surface_fingerprint: str | None
+    memory_entry_count: int | None
 
 
 def _extract(events: Sequence[TraceEvent]) -> _Extracted:
@@ -217,6 +237,10 @@ def _extract(events: Sequence[TraceEvent]) -> _Extracted:
     request_ids: list[str] = []
     provider_stop_reason: str | None = None
     provider_error_kind: str | None = None
+    memory_descriptor_fingerprint: str | None = None
+    memory_policy_fingerprint: str | None = None
+    memory_surface_fingerprint: str | None = None
+    memory_entry_count: int | None = None
 
     for event in events:
         if event.event_type == ev.RUN_COMPLETED:
@@ -251,6 +275,13 @@ def _extract(events: Sequence[TraceEvent]) -> _Extracted:
                     output_tokens = (output_tokens or 0) + int(reported_output)
         elif event.event_type == ev.PROVIDER_ERROR:
             provider_error_kind = str(event.payload.get("error_kind"))
+        elif event.event_type == ev.MEMORY_SURFACE_RESOLVED:
+            # Absent for a run with no memory configured, which is exactly why these fields
+            # stay null rather than defaulting to an empty-surface identity.
+            memory_descriptor_fingerprint = str(event.payload["memory_descriptor_fingerprint"])
+            memory_policy_fingerprint = str(event.payload["memory_policy_fingerprint"])
+            memory_surface_fingerprint = str(event.payload["memory_surface_fingerprint"])
+            memory_entry_count = int(event.payload["memory_entry_count"])
         elif event.event_type == ev.ENVIRONMENT_CONNECTED:
             descriptor = cast(dict[str, Any], event.payload["descriptor"])
             declared_tools = cast(list[dict[str, Any]], descriptor["tools"])
@@ -272,6 +303,10 @@ def _extract(events: Sequence[TraceEvent]) -> _Extracted:
         provider_request_ids=tuple(request_ids),
         provider_stop_reason=provider_stop_reason,
         provider_error_kind=provider_error_kind,
+        memory_descriptor_fingerprint=memory_descriptor_fingerprint,
+        memory_policy_fingerprint=memory_policy_fingerprint,
+        memory_surface_fingerprint=memory_surface_fingerprint,
+        memory_entry_count=memory_entry_count,
     )
 
 
@@ -389,6 +424,10 @@ def derive_result(
         input_tokens=extracted.input_tokens,
         output_tokens=extracted.output_tokens,
         latency_ms=extracted.latency_ms,
+        memory_descriptor_fingerprint=extracted.memory_descriptor_fingerprint,
+        memory_policy_fingerprint=extracted.memory_policy_fingerprint,
+        memory_surface_fingerprint=extracted.memory_surface_fingerprint,
+        memory_entry_count=extracted.memory_entry_count,
         repetition=head.repetition,
         schedule_index=_optional_int(started.payload.get("schedule_index")),
         trace_path=str(trace_path),

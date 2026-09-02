@@ -1,12 +1,12 @@
 # Agent Systems Lab - Research & Build Specification
 
 **Status:** Active research specification  
-**Version:** 2.5  
+**Version:** 2.7  
 **Repository:** `agent-systems-lab`
 
-### Version 2.5 methodological clarifications
+### Version 2.7 methodological clarifications
 
-Version 2.5 preserves the existing research direction, milestone structure, novelty gate, and v2.4 quantitative/memory discipline. It closes several Phase 0 design gaps exposed while planning the first real calibration experiment.
+Version 2.7 preserves the existing research direction, milestone structure, novelty gate, Phase 0 result, and v2.6 dual-repository provenance model. It clarifies persisted trace-path semantics for external result roots so execution evidence does not depend on developer-machine absolute paths.
 
 Earlier versions established:
 
@@ -57,6 +57,23 @@ Version 2.5 additionally clarifies:
 - operational-failure handling may invalidate an entire execution rather than replacing individual cells; the chosen unit of invalidation/replacement must be pre-registered and incomplete and replacement executions must remain distinct;
 - provider-request ceilings must not be lower than the maximum valid execution path allowed by the experiment's own run/step limits;
 - request-count limits bound request count, not spend; expected/planning cost and theoretical token exposure must be described separately where paid execution is material.
+
+Version 2.6 additionally clarifies:
+
+- the reusable Agent Systems Lab apparatus and an external research workspace are distinct provenance domains and must never be conflated because of process working directory;
+- `source_commit_sha` / `source_tree_dirty` refer specifically to the Agent Systems Lab apparatus source tree that executed the experiment;
+- external experiment/workspace provenance is captured separately as `workspace_commit_sha` / `workspace_tree_dirty`, resolved from the Git worktree containing the experiment definition when one exists;
+- apparatus Git/dependency provenance must be resolved from the actual apparatus/package source location, not from caller CWD;
+- both apparatus and workspace provenance enter authoritative raw execution evidence before being derived into normalized results;
+- external experiment/task content remains bound by the existing experiment/config/task fingerprinting discipline; additional experimental materials must be fingerprinted when a concrete study makes them model-visible or behaviourally relevant;
+- apparatus code remains single-sourced in `agent-systems-lab`; external/private research workspaces contain study material and results, not duplicated runtime/harness code;
+- any proposed implementation that changes the semantic meaning, provenance, or evidentiary authority of persisted experiment artifacts requires a SPEC contract update before implementation.
+
+Version 2.7 additionally clarifies:
+
+- persisted `trace_path` is an **execution-root-relative path** to the authoritative raw trace, not an absolute filesystem path;
+- the physical execution/results root itself may live anywhere, including an external/private research workspace, but machine-specific absolute paths are not part of normalized experiment evidence;
+- historical result rows keep the path semantics of the schema version under which they were originally produced and are not rewritten or migrated.
 
 
 ---
@@ -570,6 +587,7 @@ Prioritize:
 12. **Novelty awareness** - continuously distinguish calibration, replication, engineering work, and genuinely new research.
 13. **Model-visible surface discipline** - any content that reaches the model is part of the experiment. This includes tool names, descriptions, input/output schemas, generated schema titles, enum labels, server instructions, examples, annotations, and provider-specific tool serialization. Experimental intent or condition labels must never leak into that surface unless they are themselves the variable being tested.
 14. **Memory-surface discipline** - if future work places persistent memory into a model request, memory content, selection/retrieval, ordering, truncation, provenance, and presentation are experimental material rather than hidden storage utilities. Preserve the exact retrieved material and provider-facing request evidence, and do not build a memory subsystem before a novelty-gated question requires it.
+15. **SPEC-first evidence contracts** - if a proposed implementation changes the semantic meaning of a persisted field, execution provenance, evidence authority/derivation, or the definition of an experimental/model-visible surface, update this specification before implementing the change. Pure refactoring or ergonomics that preserve those contracts do not require a SPEC revision.
 
 ---
 
@@ -1005,6 +1023,41 @@ The exact persisted provider request remains authoritative for what memory the m
 
 Do not implement the full memory subsystem initially.
 
+### 12.1 Apparatus and external-workspace provenance
+
+A physical execution may be defined by study material outside the Agent Systems Lab repository. In that case, preserve two independent provenance domains:
+
+- **apparatus provenance** - the exact Agent Systems Lab source tree/runtime that executed the study;
+- **workspace provenance** - the Git worktree containing the experiment definition and unreleased/public study material, when such a worktree exists.
+
+The existing fields:
+
+```text
+source_commit_sha
+source_tree_dirty
+```
+
+refer **only** to apparatus provenance. Their meaning must not depend on process working directory.
+
+When an experiment definition is contained in an external Git worktree, also record:
+
+```text
+workspace_commit_sha
+workspace_tree_dirty
+```
+
+If the experiment definition is not contained in a Git worktree, workspace provenance must be explicitly unavailable/null rather than inferred from the caller's current directory or confused with apparatus provenance.
+
+Apparatus Git state and dependency-lock provenance must be resolved relative to the actual Agent Systems Lab source/package repository. Workspace Git state must be resolved relative to the repository containing the experiment definition.
+
+Both provenance layers must first be written into authoritative raw execution evidence (for example `RUN_STARTED`) and execution-level manifest metadata. Normalized result fields must be derived from the raw trace rather than injected independently downstream.
+
+Do not persist absolute developer-machine paths unless they are required to explain or reproduce the experiment and cannot be represented by stable repository-relative identity.
+
+For raw-trace references specifically, persist `trace_path` **relative to the physical execution/results root**. The execution root may itself be selected externally (for example inside a private research workspace), but normalized result evidence must not encode the researcher's absolute home-directory path merely because the output root is external.
+
+External workspaces do not authorize duplication of apparatus code. Generic runner, MCP, provider, tracing, evaluation, storage, fingerprinting, and synthetic-environment implementation remains single-sourced in `agent-systems-lab`.
+
 Credentials must never appear in traces.
 
 ---
@@ -1020,6 +1073,9 @@ experiment_id
 experiment_classification
 timestamp
 source_commit_sha
+source_tree_dirty
+workspace_commit_sha
+workspace_tree_dirty
 
 provider
 model
@@ -1068,6 +1124,10 @@ trace_path
 ```
 
 The normalized schema may contain derived convenience fields, but the ordered raw trace remains authoritative. Fields such as `first_tool_correct`, `expected_tool_used`, and `tool_recovery_success` must be derived from pre-registered metric definitions rather than ad hoc interpretation after results are observed.
+
+`source_*` and `workspace_*` provenance fields are also derived evidence. They must be reconstructible from raw execution events. Adding the workspace provenance fields changes the trace/result evidence schemas and therefore requires an explicit schema-version bump rather than silently extending historical schema versions. For the implementation current at v2.7, the intended transition remains trace schema `1.2.0 -> 1.3.0` and result schema `1.2.0 -> 1.3.0`.
+
+`trace_path` identifies the authoritative raw trace **relative to the physical execution/results root**. It must not become an absolute developer-machine path when `--results-root` points outside the apparatus repository. Consumers resolve it against the execution root recorded/known by the execution context rather than treating it as a globally absolute location.
 
 Store normalized batch results in Parquet.
 
@@ -1405,9 +1465,10 @@ Persist:
 - exact capability/environment version;
 - provider/model identifier;
 - model parameters;
-- source Git SHA;
+- apparatus source Git SHA and dirty-tree state;
+- external research-workspace Git SHA and dirty-tree state when applicable;
 - execution timestamp;
-- dependency lockfile;
+- apparatus dependency lockfile/hash;
 - raw traces;
 - normalized results.
 
@@ -1416,6 +1477,36 @@ If a provider cannot provide deterministic seeds or immutable model snapshots, d
 Record the exact provider-supported generation controls used for every run. Do not assume a universal `temperature` control exists. For models where temperature is unsupported or deprecated, omit it and rely on repeated runs plus explicit recording of the controls the provider actually supports (for example thinking mode and effort).
 
 Do not imply stronger reproducibility than the external API permits.
+
+### 18.1 External research workspaces
+
+Agent Systems Lab may execute an experiment whose definition, preregistration, study-specific materials, analysis, and results live in another repository. This is a supported research organization pattern, not a second copy of the apparatus.
+
+The intended separation is:
+
+```text
+agent-systems-lab
+    reusable apparatus/runtime
+
+external research workspace
+    literature/novelty notes
+    hypotheses
+    preregistration
+    experiment definitions/tasks/materials
+    private/raw results
+    study-specific analysis
+    paper/publication material
+```
+
+The apparatus repository may continue to evolve independently. Each real study must pin the exact apparatus commit actually used for that study, and the execution evidence must record it.
+
+External experiment/config paths and external result roots must not weaken the existing fingerprinting, provider-request preservation, trace authority, paid-run gates, or clean/dirty provenance discipline.
+
+Changing the physical result root must not change the semantic identity of a trace reference. `trace_path` remains execution-root-relative whether results are written inside the apparatus repository or into an external research workspace.
+
+The experiment's Git workspace is not itself the apparatus. Running the same apparatus from a different CWD must not change apparatus provenance.
+
+When study-specific files beyond the resolved experiment/task definitions become model-visible or behaviourally relevant (for example future memory entries, few-shot examples, retrieval corpora, or other `materials/`), the study must define and persist an appropriate canonical fingerprint/binding for that material before the claim-bearing run. Do not pre-build a generic material registry before a concrete novelty-gated experiment requires one.
 
 Evidence authority is:
 

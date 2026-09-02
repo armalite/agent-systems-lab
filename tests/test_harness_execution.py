@@ -111,11 +111,11 @@ def test_results_are_reproducibly_derived_from_persisted_traces(execution: Execu
     Re-derive every row from the trace on disk and require equality with what was written. This
     is what makes "the raw trace is authoritative" a property rather than an intention.
     """
-    _, rows = execution
+    paths, rows = execution
     resolved = resolved_harness_check()
     metric_set = METRIC_DEFINITION_SETS[resolved.config.metric_definition_set]
     for row in rows:
-        events = read_trace(Path(row.trace_path))
+        events = read_trace(paths.root / row.trace_path)
         task = resolved.task_set.by_id(row.task_id)
         rederived = derive_result(
             events=events,
@@ -129,12 +129,14 @@ def test_results_are_reproducibly_derived_from_persisted_traces(execution: Execu
 
 def test_derivation_ignores_the_evaluation_event(execution: Execution) -> None:
     """Re-derivation must not read back the evaluator's own conclusions."""
-    _, rows = execution
+    paths, rows = execution
     resolved = resolved_harness_check()
     metric_set = METRIC_DEFINITION_SETS[resolved.config.metric_definition_set]
     row = rows[0]
     events = tuple(
-        e for e in read_trace(Path(row.trace_path)) if e.event_type != ev.EVALUATION_COMPLETED
+        e
+        for e in read_trace(paths.root / row.trace_path)
+        if e.event_type != ev.EVALUATION_COMPLETED
     )
     rederived = derive_result(
         events=events,

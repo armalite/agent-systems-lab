@@ -28,8 +28,8 @@ def execution(tmp_path_factory: pytest.TempPathFactory) -> Execution:
 
 
 def test_schema_versions_were_bumped() -> None:
-    assert TRACE_SCHEMA_VERSION == "1.2.0"
-    assert RESULT_SCHEMA_VERSION == "1.2.0"
+    assert TRACE_SCHEMA_VERSION == "1.3.0"
+    assert RESULT_SCHEMA_VERSION == "1.3.0"
 
 
 def test_provenance_enters_the_raw_trace_first(execution: Execution) -> None:
@@ -43,13 +43,15 @@ def test_provenance_enters_the_raw_trace_first(execution: Execution) -> None:
 
 
 def test_rows_derive_provenance_from_that_trace(execution: Execution) -> None:
-    _, rows = execution
+    paths, rows = execution
     for row in rows:
         started = next(
-            e for e in read_trace(Path(row.trace_path)) if e.event_type == ev.RUN_STARTED
+            e for e in read_trace(paths.root / row.trace_path) if e.event_type == ev.RUN_STARTED
         )
         assert row.source_commit_sha == started.payload["source_commit_sha"]
         assert row.source_tree_dirty == started.payload["source_tree_dirty"]
+        assert row.workspace_commit_sha == started.payload["workspace_commit_sha"]
+        assert row.workspace_tree_dirty == started.payload["workspace_tree_dirty"]
         assert row.schedule_index == started.payload["schedule_index"]
 
 
@@ -93,12 +95,12 @@ def test_provenance_survives_to_parquet(execution: Execution) -> None:
 
 def test_re_derivation_equality_still_holds(execution: Execution) -> None:
     """The M2 guarantee must survive the schema bump."""
-    _, rows = execution
+    paths, rows = execution
     resolved = resolved_harness_check()
     metric_set = METRIC_DEFINITION_SETS[resolved.config.metric_definition_set]
     for row in rows:
         rederived = derive_result(
-            events=read_trace(Path(row.trace_path)),
+            events=read_trace(paths.root / row.trace_path),
             task=resolved.task_set.by_id(row.task_id),
             resolved=resolved,
             metric_set=metric_set,
@@ -110,18 +112,25 @@ def test_re_derivation_equality_still_holds(execution: Execution) -> None:
 def test_derivation_reads_only_the_trace(execution: Execution) -> None:
     """Stripping provenance from the trace must strip it from the derived row - proving the row
     is not populated from an independent source."""
-    _, rows = execution
+    paths, rows = execution
     resolved = resolved_harness_check()
     metric_set = METRIC_DEFINITION_SETS[resolved.config.metric_definition_set]
     row = rows[0]
-    events = list(read_trace(Path(row.trace_path)))
+    events = list(read_trace(paths.root / row.trace_path))
     started = events[0]
     stripped = started.model_copy(
         update={
             "payload": {
                 k: v
                 for k, v in started.payload.items()
-                if k not in {"source_commit_sha", "source_tree_dirty", "schedule_index"}
+                if k
+                not in {
+                    "source_commit_sha",
+                    "source_tree_dirty",
+                    "workspace_commit_sha",
+                    "workspace_tree_dirty",
+                    "schedule_index",
+                }
             }
         }
     )
@@ -134,4 +143,6 @@ def test_derivation_reads_only_the_trace(execution: Execution) -> None:
     )
     assert rederived.source_commit_sha is None
     assert rederived.source_tree_dirty is None
+    assert rederived.workspace_commit_sha is None
+    assert rederived.workspace_tree_dirty is None
     assert rederived.schedule_index is None

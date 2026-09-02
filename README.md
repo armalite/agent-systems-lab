@@ -242,7 +242,32 @@ it; a test re-derives every row from the persisted JSONL and requires equality. 
 below both.
 
 A logical `run_id` (`<experiment>/<condition>/<task>/r<n>`) is stable across executions, while a
-physical `execution_id` keeps reruns from overwriting evidence.
+physical `execution_id` keeps reruns from overwriting evidence. `trace_path` is recorded
+**relative to the execution root**, so a trace reference stays portable no matter where results
+were written.
+
+### External research workspaces
+
+Agent Systems Lab is the reusable apparatus. A study's definition, tasks, materials, and results
+may live in a **separate repository** - public or private - while the apparatus stays
+single-sourced here. Apparatus code is never duplicated into a study workspace.
+
+```bash
+uv run agent-lab run ../my-research/experiments/<study-id>/experiment.yaml \
+  --results-root ../my-research/results
+```
+
+Every run records **two independent provenance domains**:
+
+| Field | Meaning |
+|---|---|
+| `source_commit_sha` / `source_tree_dirty` | The apparatus source tree that executed the study, resolved from the installed `agent_lab` package |
+| `workspace_commit_sha` / `workspace_tree_dirty` | The Git worktree containing the experiment definition, or null when it is not in one |
+
+Neither is inferred from the process working directory, so running the same apparatus from a
+different directory cannot change apparatus provenance. Both enter the raw trace first and are
+derived into normalized rows from there. External experiment and task definitions remain bound by
+the same config and task-set fingerprints as in-repo ones.
 
 Results are queryable directly with DuckDB, no application code required:
 

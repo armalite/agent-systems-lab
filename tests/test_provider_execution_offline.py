@@ -188,12 +188,12 @@ def test_provider_response_information_is_preserved(execution: Execution) -> Non
 
 def test_results_still_re_derive_from_the_persisted_traces(execution: Execution) -> None:
     """The M2 guarantee must survive the provider swap."""
-    _, rows = execution
+    paths, rows = execution
     resolved = load_experiment(SMOKE)
     metric_set = METRIC_DEFINITION_SETS[resolved.config.metric_definition_set]
     for row in rows:
         rederived = derive_result(
-            events=read_trace(Path(row.trace_path)),
+            events=read_trace(paths.root / row.trace_path),
             task=resolved.task_set.by_id(row.task_id),
             resolved=resolved,
             metric_set=metric_set,
@@ -204,8 +204,8 @@ def test_results_still_re_derive_from_the_persisted_traces(execution: Execution)
 
 def test_schema_versions_are_stamped(execution: Execution) -> None:
     paths, rows = execution
-    assert all(row.result_schema_version == RESULT_SCHEMA_VERSION == "1.2.0" for row in rows)
-    assert all(row.trace_schema_version == "1.2.0" for row in rows)
+    assert all(row.result_schema_version == RESULT_SCHEMA_VERSION == "1.3.0" for row in rows)
+    assert all(row.trace_schema_version == "1.3.0" for row in rows)
     manifest = json.loads(paths.manifest.read_text())
     assert manifest["adapter_kind"] == "anthropic"
     assert manifest["paid_execution_authorized"] is True

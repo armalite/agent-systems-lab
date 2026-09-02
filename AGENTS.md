@@ -294,6 +294,16 @@ canonical statement and the section references below are the place to check the 
   again at the provider boundary, since an adapter re-serializes everything and may add material
   of its own. Guarded by `tests/test_mcp_server.py`, `tests/test_model_visible_audit.py`, and
   `tests/test_provider_execution_offline.py`.
+- **Apparatus and workspace are separate provenance domains** (`SPEC.md` s12.1, s18.1).
+  `source_*` describes the Agent Systems Lab tree that executed the study, resolved from the
+  installed package; `workspace_*` describes the worktree holding the experiment definition, or is
+  explicitly null. **Neither is ever inferred from the process working directory**, and apparatus
+  code stays single-sourced here - an external workspace holds study material and results, never
+  duplicated runtime.
+- **SPEC-first evidence contracts** (`SPEC.md` principle 15). If a change would alter the semantic
+  meaning of a persisted field, execution provenance, evidence authority, or the definition of an
+  experimental/model-visible surface, update `SPEC.md` **before** implementing it. Pure refactoring
+  that preserves those contracts does not need a spec revision.
 - **Provider controls are experimental controls.** Declare thinking mode, effort, max tokens and
   model identity explicitly rather than inheriting provider defaults, and record them. Never send
   `temperature` to current Claude models - it is unsupported and rejected. Variance is controlled

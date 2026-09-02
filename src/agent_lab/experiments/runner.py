@@ -16,12 +16,14 @@ from collections.abc import Sequence
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, cast
 
 from mcp import Client
 from pydantic import BaseModel, ConfigDict
 
+import agent_lab as agent_lab_module
 from agent_lab import __version__
 from agent_lab.environments.loader import ConnectedEnvironment, connect_environment
 from agent_lab.environments.surface import ModelSurface
@@ -171,28 +173,78 @@ def _execution_paths(results_root: Path, experiment_id: str, execution_id: str) 
     )
 
 
-def _git_provenance() -> dict[str, Any]:
-    """Source identity, including whether the tree was dirty at execution time."""
+def _git(*args: str) -> str | None:
+    """Run a git command, returning stripped stdout or None on any failure."""
+    try:
+        done = subprocess.run(args, capture_output=True, text=True, timeout=10, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return done.stdout.strip() if done.returncode == 0 else None
 
-    def _run(*args: str) -> str | None:
-        try:
-            done = subprocess.run(args, capture_output=True, text=True, timeout=10, check=False)
-        except (OSError, subprocess.SubprocessError):
-            return None
-        return done.stdout.strip() if done.returncode == 0 else None
 
-    sha = _run("git", "rev-parse", "HEAD")
-    status = _run("git", "status", "--porcelain")
+def _git_toplevel(directory: Path) -> Path | None:
+    """The Git worktree root containing `directory`, or None if it is not in one.
+
+    Always `git -C <directory>`: never the process working directory. A path outside any
+    repository yields None rather than silently resolving to wherever the caller happened to be
+    standing (`SPEC.md` s12.1).
+    """
+    top = _git("git", "-C", str(directory), "rev-parse", "--show-toplevel")
+    return Path(top) if top else None
+
+
+@lru_cache(maxsize=1)
+def apparatus_root() -> Path | None:
+    """Git root of the Agent Systems Lab source tree that is actually executing.
+
+    Resolved from the installed `agent_lab` package location, so apparatus provenance is
+    identical no matter which directory the run was launched from - including from an external
+    research workspace (`SPEC.md` s12.1, s18.1).
+    """
+    return _git_toplevel(Path(agent_lab_module.__file__).resolve().parent)
+
+
+def _provenance_at(root: Path | None, sha_key: str, dirty_key: str) -> dict[str, Any]:
+    """Commit SHA and dirty state for one Git worktree, or explicit nulls when there is none."""
+    if root is None:
+        return {sha_key: None, dirty_key: None}
+    sha = _git("git", "-C", str(root), "rev-parse", "HEAD")
+    status = _git("git", "-C", str(root), "status", "--porcelain")
     return {
-        "source_commit_sha": sha,
-        "source_tree_dirty": None if status is None else bool(status.strip()),
+        sha_key: sha,
+        dirty_key: None if status is None else bool(status.strip()),
     }
 
 
-def _lockfile_hash() -> str | None:
+def apparatus_provenance() -> dict[str, Any]:
+    """`source_*` describes the apparatus source tree only, never the caller's CWD."""
+    return _provenance_at(apparatus_root(), "source_commit_sha", "source_tree_dirty")
+
+
+def workspace_provenance(experiment_directory: Path) -> dict[str, Any]:
+    """`workspace_*` describes the worktree holding the experiment definition.
+
+    An experiment may sit several directories deep inside a research workspace, so the Git
+    top-level is resolved from the experiment's own directory. An experiment outside any
+    repository yields explicit nulls - never a CWD fallback.
+    """
+    return _provenance_at(
+        _git_toplevel(experiment_directory), "workspace_commit_sha", "workspace_tree_dirty"
+    )
+
+
+def apparatus_lockfile_hash() -> str | None:
+    """Dependency provenance for the apparatus, resolved from the apparatus root.
+
+    Read relative to the process CWD this returned nothing whenever the harness was driven from
+    anywhere but its own checkout, silently dropping dependency provenance.
+    """
     from hashlib import sha256
 
-    lock = Path("uv.lock")
+    root = apparatus_root()
+    if root is None:
+        return None
+    lock = root / "uv.lock"
     if not lock.exists():
         return None
     return "sha256:" + sha256(lock.read_bytes()).hexdigest()
@@ -404,9 +456,11 @@ async def run_experiment(
     # persisted as evidence, so condition is not confounded with time or provider state.
     schedule = build_schedule(config.conditions, [task.id for task in tasks], config.repetitions)
 
-    # Captured once, at execution start, and written into the authoritative raw evidence. The
-    # normalized rows derive it from there rather than having it injected independently.
-    provenance = _git_provenance()
+    # Both provenance domains are captured once, at execution start, and written into the
+    # authoritative raw evidence; normalized rows derive them from there rather than having them
+    # injected independently (`SPEC.md` s12.1). Apparatus and workspace are separate domains and
+    # neither is inferred from the process working directory.
+    provenance = {**apparatus_provenance(), **workspace_provenance(resolved.directory)}
 
     aborted_reason: str | None = None
     try:
@@ -481,8 +535,11 @@ async def run_experiment(
                     "provider": adapter.provider,
                     "model": adapter.model,
                 }
-                trace_path = paths.traces / f"{run_id.replace('/', '__')}.jsonl"
-                with TraceRecorder(trace_path, context) as recorder:
+                trace_file = paths.traces / f"{run_id.replace('/', '__')}.jsonl"
+                # Persisted as execution-root-relative so an external --results-root never puts
+                # a developer-machine absolute path into normalized evidence (`SPEC.md` s13, v2.7).
+                trace_reference = trace_file.relative_to(paths.root)
+                with TraceRecorder(trace_file, context) as recorder:
                     recorder.emit(
                         ev.RUN_STARTED,
                         "harness",
@@ -541,7 +598,7 @@ async def run_experiment(
                         task=task,
                         resolved=resolved,
                         metric_set=metric_set,
-                        trace_path=trace_path,
+                        trace_path=trace_reference,
                     )
                     recorder.emit(
                         ev.EVALUATION_COMPLETED,
@@ -585,7 +642,7 @@ async def run_experiment(
                 "task_set_fingerprint": resolved.task_set_fingerprint,
                 "script_set_fingerprint": resolved.script_set_fingerprint,
                 **metric_set.provenance(),
-                "lockfile_hash": _lockfile_hash(),
+                "lockfile_hash": apparatus_lockfile_hash(),
                 **provenance,
                 "run_count": len(rows),
                 "conditions": list(config.conditions),

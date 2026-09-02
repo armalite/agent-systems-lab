@@ -42,6 +42,8 @@ RESULT_SCHEMA = pa.schema(
         pa.field("timestamp", pa.string()),
         pa.field("source_commit_sha", pa.string()),
         pa.field("source_tree_dirty", pa.bool_()),
+        pa.field("workspace_commit_sha", pa.string()),
+        pa.field("workspace_tree_dirty", pa.bool_()),
         pa.field("harness_version", pa.string()),
         pa.field("trace_schema_version", pa.string()),
         pa.field("result_schema_version", pa.string()),

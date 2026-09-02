@@ -20,11 +20,12 @@ from agent_lab.experiments.tasks import Task
 from agent_lab.tracing import events as ev
 from agent_lab.tracing.events import TraceEvent
 
-RESULT_SCHEMA_VERSION = "1.2.0"
+RESULT_SCHEMA_VERSION = "1.3.0"
 """1.1.0 added provider-boundary fields (Milestone 3). 1.2.0 adds `schedule_index` and populates
 `source_commit_sha` / `source_tree_dirty`, all derived from the `RUN_STARTED` trace event rather
-than injected independently. Rows written under different result schema versions must not be
-compared as equivalent."""
+than injected independently. 1.3.0 adds `workspace_commit_sha` / `workspace_tree_dirty`, narrows
+`source_*` to apparatus-only semantics, and makes `trace_path` execution-root-relative. Rows
+written under different result schema versions must not be compared as equivalent."""
 
 
 class ToolCallRecord(BaseModel):
@@ -50,7 +51,16 @@ class ResultRow(BaseModel):
     experiment_classification: str
     timestamp: str
     source_commit_sha: str | None = None
+    """Apparatus provenance: the Agent Systems Lab source tree that executed the study. Resolved
+    from the installed package, never from the process working directory (`SPEC.md` s12.1)."""
+
     source_tree_dirty: bool | None = None
+
+    workspace_commit_sha: str | None = None
+    """Workspace provenance: the Git worktree containing the experiment definition. Null when the
+    experiment is not inside a repository - never a CWD fallback."""
+
+    workspace_tree_dirty: bool | None = None
 
     harness_version: str
     trace_schema_version: str
@@ -126,6 +136,8 @@ class ResultRow(BaseModel):
 
     random_seed_if_applicable: int | None = None
     trace_path: str
+    """Path to the authoritative raw trace, **relative to the execution root**, so a reference
+    stays portable when results are written into an external workspace (`SPEC.md` s13, v2.7)."""
 
     def metric_payload(self) -> dict[str, Any]:
         """The evaluated metrics, for the `EVALUATION_COMPLETED` trace event."""
@@ -324,6 +336,8 @@ def derive_result(
         # Derived from the authoritative raw evidence, never injected independently.
         source_commit_sha=_optional_str(started.payload.get("source_commit_sha")),
         source_tree_dirty=_optional_bool(started.payload.get("source_tree_dirty")),
+        workspace_commit_sha=_optional_str(started.payload.get("workspace_commit_sha")),
+        workspace_tree_dirty=_optional_bool(started.payload.get("workspace_tree_dirty")),
         harness_version=str(started.payload["harness_version"]),
         trace_schema_version=head.trace_schema_version,
         metric_definition_id=metric_set.id,

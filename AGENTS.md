@@ -341,11 +341,12 @@ canonical statement and the section references below are the place to check the 
   sees. **No memory configured** (null fields, no event) and **configured-but-empty** (real
   descriptor/policy fingerprints, canonical empty-surface fingerprint, count `0`, no model-visible
   message) are distinct recorded states and must not be collapsed.
-- **The leading-user memory message has not yet been exercised against a real provider.** M5 is
-  covered offline only. Two consecutive user-role messages are valid in the recorded request body
-  but have not been sent to the Anthropic API from this apparatus. Smoke-test one memory-enabled
-  task before any pre-registered memory run, and treat a provider-side rejection as an apparatus
-  finding to record, not a reason to quietly change the placement contract.
+- **The M5 provider boundary is validated.** Execution `20260902T135749Z` confirmed against
+  Anthropic that a separate leading user-role memory message followed by the task user message is
+  accepted, that the resolved surface stays frozen across turns, that the model demonstrably
+  received the memory content, and that no hidden memory metadata reached the request. No SPEC or
+  apparatus change was required. A future provider-side rejection of that placement remains an
+  apparatus finding to record, never a reason to quietly change placement or wrapper semantics.
 - **Evidence authority is raw trace > normalized result row > aggregate summary** (`SPEC.md`
   s18). If a derived row disagrees with a valid trace, the trace wins and the derivation is the
   bug. Derived fields must be reproducible from the trace alone.

@@ -78,7 +78,12 @@ experimental manipulation.
 
 ## Current status
 
-**Milestone 4 complete: Phase 0 calibration succeeded.** The lab detected a routing change when
+**Milestone 5 complete: the calibrated instrument now carries a controlled procedural-memory
+surface.** Its model-visible memory path is validated against the live Anthropic provider
+(execution `20260902T135749Z`): the leading user-role memory message was accepted, stayed frozen
+across turns, and demonstrably reached the model, with no hidden memory metadata in the request.
+
+**Milestone 4 remains the prior calibration evidence.** The lab detected a routing change when
 five semantically overlapping customer tools were added to a stable five-tool surface, on a
 frozen pre-registered 28-task design executed against `claude-opus-5`.
 
